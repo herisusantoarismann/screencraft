@@ -20,6 +20,7 @@ export const useScreenRecorder = () => {
   const {
     isRecording,
     recordingDuration,
+    isMicEnabled,
     startRecording: startStoreRecording,
     stopRecording: stopStoreRecording,
     setRecordingBlob,
@@ -32,6 +33,7 @@ export const useScreenRecorder = () => {
   const [ripples, setRipples] = useState<ClickRipple[]>([]);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const micStreamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
@@ -53,6 +55,11 @@ export const useScreenRecorder = () => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
+    }
+
+    if (micStreamRef.current) {
+      micStreamRef.current.getTracks().forEach((track) => track.stop());
+      micStreamRef.current = null;
     }
   }, []);
 
@@ -87,6 +94,30 @@ export const useScreenRecorder = () => {
         };
       }
 
+      // 1b. Capture microphone audio if user enabled Quick Audio Memo / Voiceover
+      let combinedStream = stream;
+      if (isMicEnabled) {
+        try {
+          const micStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+            },
+          });
+          micStreamRef.current = micStream;
+          const audioTrack = micStream.getAudioTracks()[0];
+          if (audioTrack) {
+            combinedStream = new MediaStream([
+              ...stream.getVideoTracks(),
+              audioTrack,
+            ]);
+          }
+        } catch (micErr) {
+          console.warn("[ScreenRecorder] Microphone capture failed:", micErr);
+        }
+      }
+
       // Use VP8 / universal webm to prevent VP9 hardware encoder crash on non-standard window dimensions
       const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp8")
         ? "video/webm;codecs=vp8"
@@ -94,7 +125,7 @@ export const useScreenRecorder = () => {
         ? "video/webm"
         : "video/webm;codecs=vp9";
 
-      const recorder = new MediaRecorder(stream, {
+      const recorder = new MediaRecorder(combinedStream, {
         mimeType,
         videoBitsPerSecond: 2500000,
       });
@@ -140,6 +171,7 @@ export const useScreenRecorder = () => {
       setIsPreparingRecord(false);
     }
   }, [
+    isMicEnabled,
     startStoreRecording,
     stopRecording,
     setRecordingBlob,
@@ -191,6 +223,9 @@ export const useScreenRecorder = () => {
       }
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+      if (micStreamRef.current) {
+        micStreamRef.current.getTracks().forEach((track) => track.stop());
       }
     };
   }, []);

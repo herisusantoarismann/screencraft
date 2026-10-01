@@ -7,6 +7,7 @@ export interface RecordState {
   isConverting: boolean;
   conversionProgress: number; // 0 to 100
   isPreviewOpen: boolean;
+  isMicEnabled: boolean; // Quick Audio Memo / Voiceover
 
   startRecording: () => void;
   stopRecording: () => void;
@@ -16,6 +17,7 @@ export interface RecordState {
   setIsConverting: (isConverting: boolean) => void;
   setConversionProgress: (progress: number) => void;
   setIsPreviewOpen: (isOpen: boolean) => void;
+  setIsMicEnabled: (enabled: boolean) => void;
   resetRecording: () => void;
 }
 
@@ -26,6 +28,7 @@ export const useRecordStore = create<RecordState>((set) => ({
   isConverting: false,
   conversionProgress: 0,
   isPreviewOpen: false,
+  isMicEnabled: false,
 
   startRecording: () =>
     set({
@@ -55,6 +58,8 @@ export const useRecordStore = create<RecordState>((set) => ({
     set({ conversionProgress: Math.min(100, Math.max(0, conversionProgress)) }),
 
   setIsPreviewOpen: (isPreviewOpen: boolean) => set({ isPreviewOpen }),
+
+  setIsMicEnabled: (isMicEnabled: boolean) => set({ isMicEnabled }),
 
   resetRecording: () =>
     set({
