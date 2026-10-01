@@ -164,13 +164,11 @@ export const useScreenCapture = (): UseScreenCaptureReturn => {
     };
   }, []);
 
-  // Handle Escape key
+  // Handle Escape key when in standby floating bar mode (no image captured)
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        if (capturedImage) {
-          void cancelCapture();
-        } else {
+        if (!capturedImage) {
           void closeOverlay();
         }
       }
@@ -180,7 +178,7 @@ export const useScreenCapture = (): UseScreenCaptureReturn => {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [capturedImage, cancelCapture, closeOverlay]);
+  }, [capturedImage, closeOverlay]);
 
   return {
     capturedImage,

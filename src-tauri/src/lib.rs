@@ -115,6 +115,7 @@ fn exit_recording_mode(window: WebviewWindow) -> Result<(), String> {
 
 #[tauri::command]
 fn enter_floating_bar_mode(window: WebviewWindow) -> Result<(), String> {
+    let _ = window.hide();
     let _ = window.set_fullscreen(false);
     let _ = window.set_always_on_top(true);
     let width = 380.0;

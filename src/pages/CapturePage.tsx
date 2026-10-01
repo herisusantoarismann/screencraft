@@ -644,6 +644,87 @@ export const CapturePage: React.FC = () => {
     a.click();
     document.body.removeChild(a);
   }, [generateExportDataUrl]);
+  // Full cancellation of screenshot session returning cleanly to standby floating bar
+  const handleFullCancelCapture = useCallback(async () => {
+    setActiveTool("select");
+    setCropArea(null);
+    setOcrArea(null);
+    setAnnotations([]);
+    setCurrentDrawing(null);
+    setOcrModal({ isOpen: false, text: "", copied: false });
+    setIsMarkdownModalOpen(false);
+    setIsWebhookModalOpen(false);
+    setActiveNodeId(null);
+    resetStepCounter();
+    resetFlow();
+    await cancelCapture();
+  }, [cancelCapture, resetStepCounter, resetFlow, setActiveTool, setActiveNodeId]);
+
+  // Hierarchical Escape key handler when screenshot is active
+  useEffect(() => {
+    if (!capturedImage) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      // 1. Priority 1: Modals and Popovers
+      if (ocrModal.isOpen) {
+        setOcrModal({ isOpen: false, text: "", copied: false });
+        return;
+      }
+      if (isMarkdownModalOpen) {
+        setIsMarkdownModalOpen(false);
+        return;
+      }
+      if (isWebhookModalOpen) {
+        setIsWebhookModalOpen(false);
+        return;
+      }
+      if (activeNodeId) {
+        setActiveNodeId(null);
+        return;
+      }
+
+      // 2. Priority 2: Active Selections (Crop Box or OCR Box)
+      if (cropArea) {
+        setCropArea(null);
+        return;
+      }
+      if (ocrArea) {
+        setOcrArea(null);
+        return;
+      }
+
+      // 3. Priority 3: Active Tools other than "select" (e.g. crop, ocr, ruler, flowBuilder)
+      if (activeTool !== "select") {
+        setActiveTool("select");
+        return;
+      }
+
+      // 4. Priority 4: In base select mode with no active tool/modal -> cancel screenshot
+      void handleFullCancelCapture();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [
+    capturedImage,
+    ocrModal.isOpen,
+    isMarkdownModalOpen,
+    isWebhookModalOpen,
+    activeNodeId,
+    cropArea,
+    ocrArea,
+    activeTool,
+    setActiveTool,
+    setActiveNodeId,
+    handleFullCancelCapture,
+  ]);
 
   return (
     <ScreenCraftTemplate
@@ -695,7 +776,7 @@ export const CapturePage: React.FC = () => {
       onOpenMarkdownModal={setIsMarkdownModalOpen}
       onResetCropArea={() => setCropArea(null)}
       onClearAnnotations={clearAnnotations}
-      onCancelCapture={() => void cancelCapture()}
+      onCancelCapture={() => void handleFullCancelCapture()}
       onCaptureScreenRetry={() => void captureScreen()}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
