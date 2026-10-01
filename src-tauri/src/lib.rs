@@ -97,6 +97,7 @@ fn enter_recording_mode(window: WebviewWindow) -> Result<(), String> {
     // Hide window briefly during repositioning to prevent Windows DWM white frame flash
     let _ = window.hide();
     let _ = window.set_fullscreen(false);
+    let _ = window.set_resizable(false);
     let _ = window.set_always_on_top(true);
     let width = 310.0;
     let height = 70.0;
@@ -133,9 +134,10 @@ fn exit_recording_mode(window: WebviewWindow) -> Result<(), String> {
 fn enter_floating_bar_mode(window: WebviewWindow) -> Result<(), String> {
     let _ = window.hide();
     let _ = window.set_fullscreen(false);
+    let _ = window.set_resizable(false);
     let _ = window.set_always_on_top(true);
-    let width = 440.0;
-    let height = 64.0;
+    let width = 620.0;
+    let height = 74.0;
     let _ = window.set_size(tauri::LogicalSize::new(width, height));
 
     if let Ok(Some(monitor)) = window.current_monitor() {
@@ -169,6 +171,7 @@ fn enter_fullscreen_mode(window: WebviewWindow) -> Result<(), String> {
 fn enter_ticket_floater_mode(window: WebviewWindow) -> Result<(), String> {
     let _ = window.hide();
     let _ = window.set_fullscreen(false);
+    let _ = window.set_resizable(false);
     let _ = window.set_always_on_top(true);
     let width = 340.0;
     let height = 210.0;
