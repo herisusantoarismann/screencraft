@@ -215,6 +215,48 @@ export const KonvaStageCanvas: React.FC<KonvaStageCanvasProps> = ({
       );
     }
 
+    if (shape.type === "stamp") {
+      const displayText = `${shape.emoji}  ${shape.label}`;
+      const charWidth = 8.2;
+      const pillWidth = Math.max(90, Math.round(displayText.length * charWidth) + 24);
+      const pillHeight = 28;
+
+      return (
+        <Group
+          key={shape.id}
+          x={shape.x}
+          y={shape.y}
+          listening={activeTool === "select"}
+          draggable={activeTool === "select"}
+        >
+          {/* Pill Container */}
+          <Rect
+            width={pillWidth}
+            height={pillHeight}
+            cornerRadius={14}
+            fill={shape.bgColor}
+            stroke={shape.badgeColor}
+            strokeWidth={1.5}
+            shadowColor="#000000"
+            shadowBlur={10}
+            shadowOpacity={0.55}
+          />
+          {/* Stamp Label */}
+          <Text
+            text={displayText}
+            fontSize={11.5}
+            fontStyle="bold"
+            fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+            fill="#ffffff"
+            width={pillWidth}
+            height={pillHeight}
+            align="center"
+            verticalAlign="middle"
+          />
+        </Group>
+      );
+    }
+
     return null;
   };
 
@@ -225,6 +267,7 @@ export const KonvaStageCanvas: React.FC<KonvaStageCanvasProps> = ({
       case "spotlight":
         return "default";
       case "stepBadge":
+      case "stamp":
         return "pointer";
       case "blur":
       case "flowBuilder":

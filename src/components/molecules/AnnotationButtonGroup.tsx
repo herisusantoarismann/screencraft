@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   MousePointer,
   ArrowUpRight,
@@ -7,6 +7,7 @@ import {
   EyeOff,
   Crop,
   ListOrdered,
+  Tag,
   Pipette,
   Ruler,
   ScanText,
@@ -15,6 +16,7 @@ import {
   Workflow,
   Loader2,
 } from "lucide-react";
+import { useToolStore, STAMP_PRESETS } from "../../stores/toolStore";
 import type { ToolType } from "../../stores/toolStore";
 import { IconButton } from "../atoms/IconButton";
 
@@ -35,6 +37,31 @@ export const AnnotationButtonGroup: React.FC<AnnotationButtonGroupProps> = ({
   onSelectTool,
   className = "",
 }) => {
+  const { activeStamp, setActiveStamp } = useToolStore();
+  const [isStampMenuOpen, setIsStampMenuOpen] = useState(false);
+  const stampMenuRef = useRef<HTMLDivElement>(null);
+
+  const currentStampPreset =
+    STAMP_PRESETS.find((p) => p.id === activeStamp) || STAMP_PRESETS[0];
+
+  // Close stamp popover on outside click
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (
+        stampMenuRef.current &&
+        !stampMenuRef.current.contains(e.target as Node)
+      ) {
+        setIsStampMenuOpen(false);
+      }
+    };
+    if (isStampMenuOpen) {
+      document.addEventListener("mousedown", handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, [isStampMenuOpen]);
+
   return (
     <div className={`flex items-center gap-1 ${className}`}>
       {/* Select Mode */}
@@ -95,6 +122,91 @@ export const AnnotationButtonGroup: React.FC<AnnotationButtonGroupProps> = ({
           </span>
         }
       />
+
+      {/* QA Severity & Issue Tags Stamp (Pilar 3) */}
+      <div className="relative" ref={stampMenuRef}>
+        <IconButton
+          title={`QA Severity & Issue Tag Stamp: ${currentStampPreset.emoji} ${currentStampPreset.label} (Klik untuk pilih)`}
+          active={activeTool === "stamp"}
+          activeColor="rose"
+          onClick={() => {
+            onSelectTool("stamp");
+            setIsStampMenuOpen((prev) => !prev);
+          }}
+          icon={<Tag className="w-4 h-4" />}
+          badge={
+            <span className="text-[10px] select-none">
+              {currentStampPreset.emoji}
+            </span>
+          }
+        />
+
+        {isStampMenuOpen && (
+          <div className="absolute top-full left-0 mt-2 p-2 bg-neutral-900/95 backdrop-blur-md border border-neutral-700 rounded-xl shadow-2xl z-50 flex flex-col gap-2 min-w-[210px] animate-in fade-in slide-in-from-top-2 duration-150">
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 px-2 py-0.5">
+                Severity Level
+              </div>
+              <div className="flex flex-col gap-0.5 mt-0.5">
+                {STAMP_PRESETS.filter((p) => p.category === "severity").map(
+                  (preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveStamp(preset.id);
+                        onSelectTool("stamp");
+                        setIsStampMenuOpen(false);
+                      }}
+                      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors text-left cursor-pointer ${
+                        activeStamp === preset.id
+                          ? "bg-neutral-800 text-white border border-neutral-600"
+                          : "text-neutral-300 hover:bg-neutral-800/60 hover:text-white"
+                      }`}
+                    >
+                      <span className="text-sm">{preset.emoji}</span>
+                      <span style={{ color: preset.badgeColor }}>
+                        {preset.label}
+                      </span>
+                    </button>
+                  )
+                )}
+              </div>
+            </div>
+
+            <div className="border-t border-neutral-800 pt-1.5">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 px-2 py-0.5">
+                Category Tags
+              </div>
+              <div className="flex flex-col gap-0.5 mt-0.5">
+                {STAMP_PRESETS.filter((p) => p.category === "category").map(
+                  (preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveStamp(preset.id);
+                        onSelectTool("stamp");
+                        setIsStampMenuOpen(false);
+                      }}
+                      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors text-left cursor-pointer ${
+                        activeStamp === preset.id
+                          ? "bg-neutral-800 text-white border border-neutral-600"
+                          : "text-neutral-300 hover:bg-neutral-800/60 hover:text-white"
+                      }`}
+                    >
+                      <span className="text-sm">{preset.emoji}</span>
+                      <span style={{ color: preset.badgeColor }}>
+                        {preset.label}
+                      </span>
+                    </button>
+                  )
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Crop */}
       <IconButton

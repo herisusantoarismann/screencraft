@@ -298,6 +298,7 @@ export const ScreenCraftTemplate: React.FC<ScreenCraftTemplateProps> = ({
       <FlowMarkdownModal
         isOpen={isMarkdownModalOpen}
         nodes={flowNodes}
+        annotations={annotations}
         diagnostics={diagnostics}
         onCopyToClipboardWithImage={onCopyToClipboardWithImage}
         onClose={() => onOpenMarkdownModal(false)}

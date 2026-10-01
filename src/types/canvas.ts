@@ -62,12 +62,34 @@ export interface BlurAnnotation extends BaseAnnotation {
   height: number;
 }
 
+export type StampType =
+  | "severity-critical"
+  | "severity-major"
+  | "severity-minor"
+  | "category-bug"
+  | "category-ui"
+  | "category-perf"
+  | "category-security"
+  | "category-typo";
+
+export interface StampAnnotation extends BaseAnnotation {
+  type: "stamp";
+  x: number;
+  y: number;
+  stampId: StampType;
+  label: string;
+  emoji: string;
+  badgeColor: string;
+  bgColor: string;
+}
+
 export type Annotation =
   | RectAnnotation
   | ArrowAnnotation
   | PenAnnotation
   | StepBadgeAnnotation
-  | BlurAnnotation;
+  | BlurAnnotation
+  | StampAnnotation;
 
 export interface Point {
   x: number;

@@ -124,20 +124,24 @@ export const ExportActionGroup: React.FC<ExportActionGroupProps> = ({
           className="p-1.5 rounded-xl"
         />
 
-        {flowNodesCount > 0 && (
-          <IconButton
-            title={`Buka Dokumentasi Markdown (${flowNodesCount} Steps)`}
-            variant="primary"
-            onClick={onOpenMarkdownModal}
-            icon={<FileText className="w-3.5 h-3.5" />}
-            badge={
+        <IconButton
+          title={
+            flowNodesCount > 0
+              ? `Jira / GitHub Bug Ticket & Flow (${flowNodesCount} Steps)`
+              : "Jira / Linear / GitHub Issue Auto-Formatter (Pilar 3)"
+          }
+          variant={flowNodesCount > 0 ? "primary" : "secondary"}
+          onClick={onOpenMarkdownModal}
+          icon={<FileText className="w-3.5 h-3.5 text-purple-400" />}
+          badge={
+            flowNodesCount > 0 ? (
               <span className="text-[10px] font-mono px-1 py-0.2 bg-purple-900/90 rounded font-bold">
                 {flowNodesCount}
               </span>
-            }
-            className="p-1.5 rounded-xl"
-          />
-        )}
+            ) : undefined
+          }
+          className="p-1.5 rounded-xl"
+        />
       </div>
 
       {/* 4. Reset Crop Area Badge if active */}

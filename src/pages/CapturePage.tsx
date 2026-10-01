@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import type { KonvaEventObject } from "konva/lib/Node";
 import type Konva from "konva";
 import { invoke } from "@tauri-apps/api/core";
-import { useToolStore } from "../stores/toolStore";
+import { useToolStore, STAMP_PRESETS } from "../stores/toolStore";
 import { useFlowStore } from "../stores/flowStore";
 import { useRecordStore } from "../stores/recordStore";
 import { useScreenCapture } from "../hooks/useScreenCapture";
@@ -16,6 +16,7 @@ import type {
   EyedropperState,
   Point,
   StepBadgeAnnotation,
+  StampAnnotation,
 } from "../types/canvas";
 import type { SystemDiagnostics } from "../types/diagnostics";
 import {
@@ -27,6 +28,7 @@ import { ScreenCraftTemplate } from "../components/templates";
 export const CapturePage: React.FC = () => {
   const {
     activeTool,
+    activeStamp,
     strokeColor,
     strokeWidth,
     stepCounter,
@@ -298,6 +300,29 @@ export const CapturePage: React.FC = () => {
         return;
       }
 
+      // Handle QA Stamp (Severity Stamps & Issue Tags - Pilar 3)
+      if (activeTool === "stamp") {
+        const preset =
+          STAMP_PRESETS.find((p) => p.id === activeStamp) || STAMP_PRESETS[0];
+        const displayText = `${preset.emoji}  ${preset.label}`;
+        const pillWidth = Math.max(90, Math.round(displayText.length * 8.2) + 24);
+        const stampAnno: StampAnnotation = {
+          id: `stamp-${Date.now()}`,
+          type: "stamp",
+          x: Math.max(0, pos.x - Math.round(pillWidth / 2)),
+          y: Math.max(0, pos.y - 14),
+          stampId: preset.id,
+          label: preset.label,
+          emoji: preset.emoji,
+          badgeColor: preset.badgeColor,
+          bgColor: preset.bgColor,
+          strokeColor: preset.badgeColor,
+          strokeWidth: 1.5,
+        };
+        setAnnotations((prev) => [...prev, stampAnno]);
+        return;
+      }
+
       // Handle Crop Selection
       if (activeTool === "crop") {
         setIsCropping(true);
@@ -368,6 +393,7 @@ export const CapturePage: React.FC = () => {
     },
     [
       activeTool,
+      activeStamp,
       strokeColor,
       strokeWidth,
       stepCounter,

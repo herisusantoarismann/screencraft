@@ -10,6 +10,7 @@ import {
     Sparkles,
     ShieldCheck,
     AppWindow,
+    Terminal,
 } from "lucide-react";
 import {
     getLastWebhookUrl,
@@ -61,6 +62,7 @@ export const WebhookModal: React.FC<WebhookModalProps> = ({
 }) => {
     const [webhookUrl, setWebhookUrl] = useState<string>("");
     const [notes, setNotes] = useState<string>("");
+    const [stackTrace, setStackTrace] = useState<string>("");
     const [attachSpecs, setAttachSpecs] = useState<boolean>(true);
     const [targetApp, setTargetApp] = useState<string>("");
     const [windowTitle, setWindowTitle] = useState<string>("");
@@ -79,6 +81,7 @@ export const WebhookModal: React.FC<WebhookModalProps> = ({
             setWebhookUrl(savedUrl);
             setDetectedType(detectWebhookType(savedUrl));
             setNotes(initialNotes);
+            setStackTrace("");
             setFeedback(null);
             setIsSending(false);
             if (diagnostics) {
@@ -139,16 +142,22 @@ export const WebhookModal: React.FC<WebhookModalProps> = ({
             let success = false;
             const type = detectWebhookType(trimmedUrl);
 
-            // Append environment & hardware specs table with manual overrides if toggle is on
-            let finalMessage = notes;
+            // Feature 7: Format stack trace and append specs table
+            let baseMessage = notes.trim();
+            if (stackTrace.trim()) {
+                const stackBlock = `### 💥 Stack Trace & Console Error\n\`\`\`log\n${stackTrace.trim()}\n\`\`\``;
+                baseMessage = baseMessage ? `${baseMessage}\n\n${stackBlock}` : stackBlock;
+            }
+
+            let finalMessage = baseMessage;
             if (attachSpecs && diagnostics) {
                 const specsMarkdown = generateSpecsMarkdown(
                     diagnostics,
                     targetApp,
                     windowTitle
                 );
-                finalMessage = notes.trim()
-                    ? `${notes.trim()}\n\n${specsMarkdown}`
+                finalMessage = baseMessage
+                    ? `${baseMessage}\n\n${specsMarkdown}`
                     : specsMarkdown;
             }
 
@@ -258,6 +267,26 @@ export const WebhookModal: React.FC<WebhookModalProps> = ({
                             onChange={(e) => setNotes(e.target.value)}
                             placeholder="Tulis pesan pengantar atau bug report di sini..."
                             className="w-full px-3 py-2 bg-neutral-950/90 border border-neutral-700/80 rounded-xl text-xs text-neutral-200 placeholder-neutral-500 focus:outline-hidden focus:border-indigo-500 resize-none transition-colors"
+                        />
+                    </div>
+
+                    {/* Feature 7: Stack Trace & Console Error Slot */}
+                    <div className="flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between">
+                            <label className="text-[11px] uppercase font-bold text-rose-400 flex items-center gap-1.5">
+                                <Terminal className="w-3 h-3 text-rose-400" />
+                                <span>Stack Trace / Console Error (F12 / API 500)</span>
+                            </label>
+                            <span className="text-[10px] text-neutral-500 font-normal">
+                                Opsional
+                            </span>
+                        </div>
+                        <textarea
+                            rows={3}
+                            value={stackTrace}
+                            onChange={(e) => setStackTrace(e.target.value)}
+                            placeholder="Paste error inspect console (F12) atau response 500 API di sini..."
+                            className="w-full px-3 py-2 bg-neutral-950/90 border border-neutral-700/80 rounded-xl text-xs font-mono text-rose-300 placeholder-neutral-600 focus:outline-hidden focus:border-rose-500/80 resize-none transition-colors"
                         />
                     </div>
 

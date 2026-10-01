@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { StampType } from "../types/canvas";
 
 export type ToolType =
   | "select"
@@ -8,6 +9,7 @@ export type ToolType =
   | "blur"
   | "crop"
   | "stepBadge"
+  | "stamp"
   | "eyedropper"
   | "ruler"
   | "ocr"
@@ -15,14 +17,94 @@ export type ToolType =
   | "laser"
   | "flowBuilder";
 
+export interface StampPreset {
+  id: StampType;
+  label: string;
+  emoji: string;
+  category: "severity" | "category";
+  badgeColor: string;
+  bgColor: string;
+}
+
+export const STAMP_PRESETS: StampPreset[] = [
+  // Severity Stamps (🔴 Critical, 🟠 Major, 🟡 Minor)
+  {
+    id: "severity-critical",
+    label: "Critical / Blocker",
+    emoji: "🔴",
+    category: "severity",
+    badgeColor: "#ef4444",
+    bgColor: "rgba(69, 10, 10, 0.95)",
+  },
+  {
+    id: "severity-major",
+    label: "Major Defect",
+    emoji: "🟠",
+    category: "severity",
+    badgeColor: "#f97316",
+    bgColor: "rgba(67, 20, 7, 0.95)",
+  },
+  {
+    id: "severity-minor",
+    label: "Minor / Cosmetic",
+    emoji: "🟡",
+    category: "severity",
+    badgeColor: "#eab308",
+    bgColor: "rgba(66, 32, 6, 0.95)",
+  },
+  // Issue Categories ([BUG], [UI/CSS GLITCH], [PERF / LAG], [SECURITY], [TYPO])
+  {
+    id: "category-bug",
+    label: "[BUG]",
+    emoji: "🐛",
+    category: "category",
+    badgeColor: "#f43f5e",
+    bgColor: "rgba(76, 5, 25, 0.95)",
+  },
+  {
+    id: "category-ui",
+    label: "[UI/CSS GLITCH]",
+    emoji: "🎨",
+    category: "category",
+    badgeColor: "#06b6d4",
+    bgColor: "rgba(8, 51, 68, 0.95)",
+  },
+  {
+    id: "category-perf",
+    label: "[PERF / LAG]",
+    emoji: "⚡",
+    category: "category",
+    badgeColor: "#f59e0b",
+    bgColor: "rgba(69, 26, 3, 0.95)",
+  },
+  {
+    id: "category-security",
+    label: "[SECURITY]",
+    emoji: "🛡️",
+    category: "category",
+    badgeColor: "#a855f7",
+    bgColor: "rgba(59, 7, 100, 0.95)",
+  },
+  {
+    id: "category-typo",
+    label: "[TYPO]",
+    emoji: "✏️",
+    category: "category",
+    badgeColor: "#10b981",
+    bgColor: "rgba(2, 44, 34, 0.95)",
+  },
+];
+
 export interface ToolState {
   activeTool: ToolType;
+  activeStamp: StampType;
   strokeColor: string;
   strokeWidth: number;
   stepCounter: number;
   isOcrProcessing: boolean;
   spotlightRadius: number;
   setActiveTool: (tool: ToolType) => void;
+  setActiveStamp: (stamp: StampType) => void;
   setStrokeColor: (color: string) => void;
   setStrokeWidth: (width: number) => void;
   incrementStepCounter: () => void;
@@ -34,12 +116,14 @@ export interface ToolState {
 
 export const useToolStore = create<ToolState>((set) => ({
   activeTool: "select",
+  activeStamp: "severity-critical",
   strokeColor: "#ef4444",
   strokeWidth: 3,
   stepCounter: 1,
   isOcrProcessing: false,
   spotlightRadius: 120,
   setActiveTool: (activeTool: ToolType) => set({ activeTool }),
+  setActiveStamp: (activeStamp: StampType) => set({ activeStamp }),
   setStrokeColor: (strokeColor: string) => set({ strokeColor }),
   setStrokeWidth: (strokeWidth: number) => set({ strokeWidth }),
   incrementStepCounter: () =>
