@@ -10,3 +10,4 @@ export * from "../canvas/PresentationOverlay";
 export * from "../recorder/VideoTrimModal";
 export * from "../hud/WebhookModal";
 export * from "./DiagnosticsModal";
+export * from "./VisualComparisonModal";
