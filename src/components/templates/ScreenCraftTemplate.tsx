@@ -77,6 +77,9 @@ export interface ScreenCraftTemplateProps {
   isFlashActive: boolean;
   isCopying: boolean;
   copySuccess: boolean;
+  isDownloading?: boolean;
+  downloadSuccess?: boolean;
+  downloadToast?: string | null;
 
   // Event Handlers
   onTriggerScreenshot: () => void;
@@ -151,6 +154,9 @@ export const ScreenCraftTemplate: React.FC<ScreenCraftTemplateProps> = ({
   isFlashActive,
   isCopying,
   copySuccess,
+  isDownloading,
+  downloadSuccess,
+  downloadToast,
   onTriggerScreenshot,
   onStartRecording,
   onStopRecording,
@@ -248,6 +254,8 @@ export const ScreenCraftTemplate: React.FC<ScreenCraftTemplateProps> = ({
           }
           isCopying={isCopying}
           copySuccess={copySuccess}
+          isDownloading={isDownloading}
+          downloadSuccess={downloadSuccess}
           includeDiagnosticsStamp={includeDiagnosticsStamp}
           onToggleDiagnosticsStamp={onToggleDiagnosticsStamp}
           onOpenDiagnosticsModal={() => onOpenDiagnosticsModal(true)}
@@ -306,6 +314,12 @@ export const ScreenCraftTemplate: React.FC<ScreenCraftTemplateProps> = ({
 
       {/* Eyedropper Toast Feedback */}
       <Toast message={eyedropperToast} type="success" />
+
+      {/* Download PNG Toast Feedback */}
+      <Toast
+        message={downloadToast || null}
+        type={downloadToast?.startsWith("Gagal") ? "error" : "success"}
+      />
 
       {/* OCR Processing Overlay */}
       <OcrIndicator isProcessing={isOcrProcessing} />

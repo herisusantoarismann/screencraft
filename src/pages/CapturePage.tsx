@@ -156,6 +156,9 @@ export const CapturePage: React.FC = () => {
     // Export action state
     const [isCopying, setIsCopying] = useState<boolean>(false);
     const [copySuccess, setCopySuccess] = useState<boolean>(false);
+    const [isDownloading, setIsDownloading] = useState<boolean>(false);
+    const [downloadSuccess, setDownloadSuccess] = useState<boolean>(false);
+    const [downloadToast, setDownloadToast] = useState<string | null>(null);
 
     const stageRef = useRef<Konva.Stage>(null);
     const cropLayerRef = useRef<Konva.Layer>(null);
@@ -781,15 +784,32 @@ export const CapturePage: React.FC = () => {
 
     // Export: Download PNG locally
     const handleDownloadPNG = useCallback(async () => {
-        const dataUrl = await getFinalExportDataUrl();
-        if (!dataUrl) return;
+        setIsDownloading(true);
+        setDownloadToast(null);
+        try {
+            const dataUrl = await getFinalExportDataUrl();
+            if (!dataUrl) throw new Error("Gagal mengambil data gambar screenshot.");
 
-        const a = document.createElement("a");
-        a.href = dataUrl;
-        a.download = `screencraft-${Date.now()}.png`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+            const a = document.createElement("a");
+            a.href = dataUrl;
+            a.download = `screencraft-${Date.now()}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            setDownloadSuccess(true);
+            setDownloadToast("Gambar PNG berhasil diunduh ke folder Downloads! 🎉");
+            setTimeout(() => {
+                setDownloadSuccess(false);
+                setDownloadToast(null);
+            }, 3500);
+        } catch (err) {
+            console.error("[CapturePage] Download PNG failed:", err);
+            setDownloadToast("Gagal mengunduh gambar PNG.");
+            setTimeout(() => setDownloadToast(null), 3500);
+        } finally {
+            setIsDownloading(false);
+        }
     }, [getFinalExportDataUrl]);
 
     // Full cancellation of screenshot session returning cleanly to standby floating bar
@@ -928,6 +948,9 @@ export const CapturePage: React.FC = () => {
             isFlashActive={isFlashActive}
             isCopying={isCopying}
             copySuccess={copySuccess}
+            isDownloading={isDownloading}
+            downloadSuccess={downloadSuccess}
+            downloadToast={downloadToast}
             onTriggerScreenshot={() => void triggerScreenshot()}
             onStartRecording={() => void startRecording()}
             onStopRecording={() => void stopRecording()}
