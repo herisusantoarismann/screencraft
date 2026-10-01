@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import type { KonvaEventObject } from "konva/lib/Node";
 import type Konva from "konva";
 import type { ToolType } from "../../stores/toolStore";
@@ -177,6 +177,31 @@ export const ScreenCraftTemplate: React.FC<ScreenCraftTemplateProps> = ({
   onCopyScreenshotOnly,
   onGetImageDataUrlOrBlob,
 }) => {
+  const [isFloaterActive, setIsFloaterActive] = useState(false);
+
+  // Dedicated mini floater mode when QA ticket modal is minimized to floater
+  if (isFloaterActive && isMarkdownModalOpen) {
+    return (
+      <div className="w-screen h-screen overflow-hidden bg-transparent select-none p-1">
+        <FlowMarkdownModal
+          isOpen={isMarkdownModalOpen}
+          isFloaterActive={isFloaterActive}
+          onFloaterModeChange={setIsFloaterActive}
+          nodes={flowNodes}
+          annotations={annotations}
+          diagnostics={diagnostics}
+          onCopyToClipboardWithImage={onCopyToClipboardWithImage}
+          onCopyScreenshotOnly={onCopyScreenshotOnly}
+          onGetImageDataUrlOrBlob={onGetImageDataUrlOrBlob}
+          onClose={() => {
+            setIsFloaterActive(false);
+            onOpenMarkdownModal(false);
+          }}
+        />
+      </div>
+    );
+  }
+
   // Dedicated mini widget mode when live recording is active
   if (isRecording) {
     return (
@@ -299,13 +324,18 @@ export const ScreenCraftTemplate: React.FC<ScreenCraftTemplateProps> = ({
       {/* Markdown Documentation Exporter Modal */}
       <FlowMarkdownModal
         isOpen={isMarkdownModalOpen}
+        isFloaterActive={isFloaterActive}
+        onFloaterModeChange={setIsFloaterActive}
         nodes={flowNodes}
         annotations={annotations}
         diagnostics={diagnostics}
         onCopyToClipboardWithImage={onCopyToClipboardWithImage}
         onCopyScreenshotOnly={onCopyScreenshotOnly}
         onGetImageDataUrlOrBlob={onGetImageDataUrlOrBlob}
-        onClose={() => onOpenMarkdownModal(false)}
+        onClose={() => {
+          setIsFloaterActive(false);
+          onOpenMarkdownModal(false);
+        }}
       />
 
       {/* Smart Ruler */}

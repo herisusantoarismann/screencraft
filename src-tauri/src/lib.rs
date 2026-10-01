@@ -166,6 +166,42 @@ fn enter_fullscreen_mode(window: WebviewWindow) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn enter_ticket_floater_mode(window: WebviewWindow) -> Result<(), String> {
+    let _ = window.hide();
+    let _ = window.set_fullscreen(false);
+    let _ = window.set_always_on_top(true);
+    let width = 340.0;
+    let height = 210.0;
+    let _ = window.set_size(tauri::LogicalSize::new(width, height));
+
+    if let Ok(Some(monitor)) = window.current_monitor() {
+        let scale = monitor.scale_factor();
+        let logical_size = monitor.size().to_logical::<f64>(scale);
+        let pos_x = (logical_size.width - width - 24.0).max(0.0);
+        let pos_y = (logical_size.height - height - 48.0).max(0.0);
+        let _ = window.set_position(tauri::LogicalPosition::new(pos_x, pos_y));
+    }
+    let _ = window.show();
+    let _ = window.set_focus();
+    Ok(())
+}
+
+#[tauri::command]
+fn exit_ticket_floater_mode(window: WebviewWindow) -> Result<(), String> {
+    if let Ok(Some(monitor)) = window.current_monitor() {
+        let scale = monitor.scale_factor();
+        let logical_size = monitor.size().to_logical::<f64>(scale);
+        let _ = window.set_position(tauri::LogicalPosition::new(0.0, 0.0));
+        let _ = window.set_size(tauri::LogicalSize::new(logical_size.width, logical_size.height));
+    }
+    let _ = window.set_fullscreen(true);
+    let _ = window.set_always_on_top(true);
+    let _ = window.show();
+    let _ = window.set_focus();
+    Ok(())
+}
+
+#[tauri::command]
 fn trigger_screenshot(window: WebviewWindow) -> Result<String, String> {
     #[cfg(target_os = "windows")]
     exclude_from_capture(&window);
@@ -423,6 +459,8 @@ pub fn run() {
             exit_recording_mode,
             enter_floating_bar_mode,
             enter_fullscreen_mode,
+            enter_ticket_floater_mode,
+            exit_ticket_floater_mode,
             trigger_screenshot,
             save_file_to_downloads,
             send_slack_webhook,
