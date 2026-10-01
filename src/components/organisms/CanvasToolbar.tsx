@@ -16,6 +16,8 @@ export interface CanvasToolbarProps {
   hasAnnotationsOrNodes: boolean;
   isCopying: boolean;
   copySuccess: boolean;
+  isDownloading?: boolean;
+  downloadSuccess?: boolean;
   includeDiagnosticsStamp: boolean;
   onToggleDiagnosticsStamp: () => void;
   onOpenDiagnosticsModal: () => void;
@@ -41,6 +43,8 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
   hasAnnotationsOrNodes,
   isCopying,
   copySuccess,
+  isDownloading = false,
+  downloadSuccess = false,
   includeDiagnosticsStamp,
   onToggleDiagnosticsStamp,
   onOpenDiagnosticsModal,
@@ -55,15 +59,18 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
   onClearAnnotations,
   onCancelCapture,
 }) => {
+  const isBusy = isCopying || isDownloading;
+
   return (
-    <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 sm:gap-2.5 px-3 sm:px-4 py-2 bg-neutral-900/90 hover:bg-neutral-900/95 backdrop-blur-md border border-neutral-700/80 rounded-2xl shadow-2xl text-white transition-all max-w-[96vw] overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden animate-in fade-in slide-in-from-top-4 duration-300">
+    <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 sm:gap-2.5 px-3 sm:px-4 py-2 bg-neutral-900/90 hover:bg-neutral-900/95 backdrop-blur-md border border-neutral-700/80 rounded-2xl shadow-2xl text-white transition-all max-w-[96vw] overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden animate-in fade-in slide-from-top-4 duration-300">
       {/* 1. Tool Selectors */}
       <AnnotationButtonGroup
         activeTool={activeTool}
         stepCounter={stepCounter}
         flowNodesCount={flowNodesCount}
         isOcrProcessing={isOcrProcessing}
-        onSelectTool={onSelectTool}
+        onSelectTool={isBusy ? () => {} : onSelectTool}
+        className={isBusy ? "pointer-events-none opacity-50" : ""}
       />
 
       {/* Separator */}
@@ -72,7 +79,8 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
       {/* 2. Color Presets */}
       <ColorPickerGroup
         currentColor={strokeColor}
-        onSelectColor={onSelectColor}
+        onSelectColor={isBusy ? () => {} : onSelectColor}
+        className={isBusy ? "pointer-events-none opacity-50" : ""}
       />
 
       {/* Separator */}
@@ -82,6 +90,8 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
       <ExportActionGroup
         isCopying={isCopying}
         copySuccess={copySuccess}
+        isDownloading={isDownloading}
+        downloadSuccess={downloadSuccess}
         flowNodesCount={flowNodesCount}
         cropArea={cropArea}
         hasAnnotationsOrNodes={hasAnnotationsOrNodes}
