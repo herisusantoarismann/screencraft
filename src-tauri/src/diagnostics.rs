@@ -31,7 +31,13 @@ mod win_ops {
     extern "system" {
         fn GetForegroundWindow() -> *mut std::ffi::c_void;
         fn GetWindowTextW(hwnd: *mut std::ffi::c_void, lp_string: *mut u16, n_max_count: i32) -> i32;
+        fn GetWindowTextLengthW(hwnd: *mut std::ffi::c_void) -> i32;
         fn GetWindowThreadProcessId(hwnd: *mut std::ffi::c_void, lpdw_process_id: *mut u32) -> u32;
+        fn GetTopWindow(hwnd: *mut std::ffi::c_void) -> *mut std::ffi::c_void;
+        fn GetWindow(hwnd: *mut std::ffi::c_void, u_cmd: u32) -> *mut std::ffi::c_void;
+        fn IsWindowVisible(hwnd: *mut std::ffi::c_void) -> i32;
+        fn IsIconic(hwnd: *mut std::ffi::c_void) -> i32;
+        fn GetClassNameW(hwnd: *mut std::ffi::c_void, lp_class_name: *mut u16, n_max_count: i32) -> i32;
     }
 
     #[link(name = "kernel32")]
@@ -80,15 +86,194 @@ mod win_ops {
         dw_file_date_ls: u32,
     }
 
+    pub fn inspect_process(pid: u32) -> (String, String, bool) {
+        if pid == 0 {
+            return ("Application".to_string(), "".to_string(), false);
+        }
+        unsafe {
+            // PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+            let h_proc = OpenProcess(0x1000, 0, pid);
+            if h_proc.is_null() {
+                return ("Application".to_string(), "".to_string(), false);
+            }
+
+            let mut path_buf = [0u16; 1024];
+            let mut path_len = 1024u32;
+            let mut exe_name = String::new();
+            let mut version_str = String::new();
+            let mut is_screencraft = false;
+
+            if QueryFullProcessImageNameW(h_proc, 0, path_buf.as_mut_ptr(), &mut path_len) != 0 {
+                let full_path = OsString::from_wide(&path_buf[..path_len as usize]);
+                let path_str = full_path.to_string_lossy();
+                if let Some(file_name) = std::path::Path::new(&*path_str).file_name() {
+                    let name = file_name.to_string_lossy().to_string();
+                    if name.to_lowercase().contains("screencraft") {
+                        is_screencraft = true;
+                    }
+                    exe_name = friendly_app_name(&name);
+                }
+
+                // Query file version
+                let mut zero = 0u32;
+                let size = GetFileVersionInfoSizeW(path_buf.as_ptr(), &mut zero);
+                if size > 0 {
+                    let mut data = vec![0u8; size as usize];
+                    if GetFileVersionInfoW(path_buf.as_ptr(), 0, size, data.as_mut_ptr() as *mut _) != 0 {
+                        let sub_block: Vec<u16> = "\\\0".encode_utf16().collect();
+                        let mut ptr = std::ptr::null_mut();
+                        let mut out_len = 0u32;
+                        if VerQueryValueW(
+                            data.as_ptr() as *const _,
+                            sub_block.as_ptr(),
+                            &mut ptr,
+                            &mut out_len,
+                        ) != 0
+                            && out_len >= std::mem::size_of::<VS_FIXEDFILEINFO>() as u32
+                        {
+                            let info = &*(ptr as *const VS_FIXEDFILEINFO);
+                            let major = (info.dw_product_version_ms >> 16) & 0xffff;
+                            let minor = info.dw_product_version_ms & 0xffff;
+                            let build = (info.dw_product_version_ls >> 16) & 0xffff;
+                            let patch = info.dw_product_version_ls & 0xffff;
+                            version_str = format!("v{major}.{minor}.{build}.{patch}");
+                        }
+                    }
+                }
+            }
+            CloseHandle(h_proc);
+
+            if exe_name.is_empty() {
+                exe_name = "Application".to_string();
+            }
+
+            (exe_name, version_str, is_screencraft)
+        }
+    }
+
     pub fn get_active_window() -> (String, String, String) {
         unsafe {
-            let hwnd = GetForegroundWindow();
-            if hwnd.is_null() {
-                return ("(None)".to_string(), "Desktop".to_string(), "".to_string());
+            let my_pid = std::process::id();
+            let mut target_hwnd: *mut std::ffi::c_void = std::ptr::null_mut();
+
+            // 1. Check GetForegroundWindow() first
+            let fg_hwnd = GetForegroundWindow();
+            if !fg_hwnd.is_null() {
+                let mut fg_pid = 0u32;
+                GetWindowThreadProcessId(fg_hwnd, &mut fg_pid);
+                if fg_pid != 0 && fg_pid != my_pid {
+                    target_hwnd = fg_hwnd;
+                }
+            }
+
+            // 2. If ScreenCraft is the foreground window (overlay / floating bar is focused),
+            // iterate top-level windows in Z-order to find the topmost non-ScreenCraft application!
+            if target_hwnd.is_null() {
+                const GW_HWNDNEXT: u32 = 2;
+                let mut curr = if !fg_hwnd.is_null() {
+                    GetWindow(fg_hwnd, GW_HWNDNEXT)
+                } else {
+                    GetTopWindow(std::ptr::null_mut())
+                };
+
+                let mut loop_count = 0;
+                while !curr.is_null() && loop_count < 150 {
+                    loop_count += 1;
+
+                    // Must be visible
+                    if IsWindowVisible(curr) == 0 {
+                        curr = GetWindow(curr, GW_HWNDNEXT);
+                        continue;
+                    }
+
+                    // Must not be minimized
+                    if IsIconic(curr) != 0 {
+                        curr = GetWindow(curr, GW_HWNDNEXT);
+                        continue;
+                    }
+
+                    // Must have a title length > 0
+                    let tlen = GetWindowTextLengthW(curr);
+                    if tlen <= 0 {
+                        curr = GetWindow(curr, GW_HWNDNEXT);
+                        continue;
+                    }
+
+                    // Check PID
+                    let mut pid = 0u32;
+                    GetWindowThreadProcessId(curr, &mut pid);
+                    if pid == 0 || pid == my_pid {
+                        curr = GetWindow(curr, GW_HWNDNEXT);
+                        continue;
+                    }
+
+                    // Check Window Class to filter out Windows Shell & Desktop background elements
+                    let mut class_buf = [0u16; 256];
+                    let clen = GetClassNameW(curr, class_buf.as_mut_ptr(), 256);
+                    let class_name = if clen > 0 {
+                        OsString::from_wide(&class_buf[..clen as usize])
+                            .to_string_lossy()
+                            .to_string()
+                    } else {
+                        String::new()
+                    };
+
+                    let c_lower = class_name.to_lowercase();
+                    if c_lower.contains("shell_traywnd")
+                        || c_lower.contains("progman")
+                        || c_lower.contains("workerw")
+                        || c_lower.contains("shell_secondarytraywnd")
+                        || c_lower == "windows.ui.core.corewindow"
+                    {
+                        curr = GetWindow(curr, GW_HWNDNEXT);
+                        continue;
+                    }
+
+                    // Check Window Title
+                    let mut title_buf = [0u16; 512];
+                    let len = GetWindowTextW(curr, title_buf.as_mut_ptr(), 512);
+                    let title = if len > 0 {
+                        OsString::from_wide(&title_buf[..len as usize])
+                            .to_string_lossy()
+                            .to_string()
+                    } else {
+                        String::new()
+                    };
+
+                    let t_lower = title.to_lowercase();
+                    if title.is_empty()
+                        || t_lower == "program manager"
+                        || t_lower == "windows shell experience host"
+                        || t_lower == "task switching"
+                        || t_lower.contains("screencraft")
+                    {
+                        curr = GetWindow(curr, GW_HWNDNEXT);
+                        continue;
+                    }
+
+                    // Verify executable is not screencraft
+                    let (exe_name, _, is_screencraft) = inspect_process(pid);
+                    if is_screencraft || exe_name.to_lowercase().contains("screencraft") {
+                        curr = GetWindow(curr, GW_HWNDNEXT);
+                        continue;
+                    }
+
+                    // Topmost non-ScreenCraft user application found!
+                    target_hwnd = curr;
+                    break;
+                }
+            }
+
+            if target_hwnd.is_null() {
+                return (
+                    "(Active Desktop)".to_string(),
+                    "Desktop Application".to_string(),
+                    "".to_string(),
+                );
             }
 
             let mut title_buf = [0u16; 512];
-            let len = GetWindowTextW(hwnd, title_buf.as_mut_ptr(), 512);
+            let len = GetWindowTextW(target_hwnd, title_buf.as_mut_ptr(), 512);
             let title = if len > 0 {
                 OsString::from_wide(&title_buf[..len as usize])
                     .to_string_lossy()
@@ -98,52 +283,9 @@ mod win_ops {
             };
 
             let mut pid = 0u32;
-            GetWindowThreadProcessId(hwnd, &mut pid);
+            GetWindowThreadProcessId(target_hwnd, &mut pid);
 
-            let mut exe_name = String::new();
-            let mut version_str = String::new();
-
-            if pid > 0 {
-                // PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
-                let h_proc = OpenProcess(0x1000, 0, pid);
-                if !h_proc.is_null() {
-                    let mut path_buf = [0u16; 1024];
-                    let mut path_len = 1024u32;
-                    if QueryFullProcessImageNameW(h_proc, 0, path_buf.as_mut_ptr(), &mut path_len) != 0 {
-                        let full_path = OsString::from_wide(&path_buf[..path_len as usize]);
-                        let path_str = full_path.to_string_lossy();
-                        if let Some(file_name) = std::path::Path::new(&*path_str).file_name() {
-                            let name = file_name.to_string_lossy().to_string();
-                            exe_name = friendly_app_name(&name);
-                        }
-
-                        // Query file version
-                        let mut zero = 0u32;
-                        let size = GetFileVersionInfoSizeW(path_buf.as_ptr(), &mut zero);
-                        if size > 0 {
-                            let mut data = vec![0u8; size as usize];
-                            if GetFileVersionInfoW(path_buf.as_ptr(), 0, size, data.as_mut_ptr() as *mut _) != 0 {
-                                let sub_block: Vec<u16> = "\\\0".encode_utf16().collect();
-                                let mut ptr = std::ptr::null_mut();
-                                let mut out_len = 0u32;
-                                if VerQueryValueW(data.as_ptr() as *const _, sub_block.as_ptr(), &mut ptr, &mut out_len) != 0 && out_len >= std::mem::size_of::<VS_FIXEDFILEINFO>() as u32 {
-                                    let info = &*(ptr as *const VS_FIXEDFILEINFO);
-                                    let major = (info.dw_product_version_ms >> 16) & 0xffff;
-                                    let minor = info.dw_product_version_ms & 0xffff;
-                                    let build = (info.dw_product_version_ls >> 16) & 0xffff;
-                                    let patch = info.dw_product_version_ls & 0xffff;
-                                    version_str = format!("v{major}.{minor}.{build}.{patch}");
-                                }
-                            }
-                        }
-                    }
-                    CloseHandle(h_proc);
-                }
-            }
-
-            if exe_name.is_empty() {
-                exe_name = "Application".to_string();
-            }
+            let (exe_name, version_str, _) = inspect_process(pid);
 
             (title, exe_name, version_str)
         }
@@ -339,12 +481,12 @@ pub fn extract_system_diagnostics(
     #[cfg(not(target_os = "windows"))]
     let (win_title, app_name, app_ver) = ("(Desktop)".to_string(), "Browser/App".to_string(), "".to_string());
 
-    let now = chrono_free_timestamp();
+    let now = get_local_timestamp();
 
     // Formatted single-line stamp for footer watermark:
-    // e.g. "Windows 11 Build 26100 (64-bit) | AMD Ryzen 7 7840HS | RAM: 16.0 GB (Free: 6.4 GB) | 1920x1080 @ 125% | Target: Google Chrome v128.0 | ScreenCraft"
+    // e.g. "Windows 11 Build 26100 (64-bit) | AMD Ryzen 7 7840HS | RAM: 16.0 GB (Free: 6.4 GB) | 1920x1080 @ 125% | Target: Google Chrome v128.0 | 2026-10-01 13:56:33"
     let compact_stamp = format!(
-        "{} {} | {} | RAM: {:.1}GB (Free: {:.1}GB) | {} @ {}% Scale | Target: {} {} | ScreenCraft QA",
+        "{} {} | {} | RAM: {:.1}GB (Free: {:.1}GB) | {} @ {}% Scale | Target: {} {} | {}",
         os_display,
         os_build,
         cpu_brand,
@@ -353,7 +495,8 @@ pub fn extract_system_diagnostics(
         display_res,
         scale_pct,
         app_name,
-        if !app_ver.is_empty() { &app_ver } else { "" }
+        if !app_ver.is_empty() { &app_ver } else { "" },
+        now
     );
 
     // Markdown Table for QA tickets / Webhook
@@ -368,7 +511,7 @@ pub fn extract_system_diagnostics(
         | **Display & Scaling** | `{}` @ `{}% Scale (DPI)` |\n\
         | **Target Application** | `{}` {} |\n\
         | **Active Window Title** | `{}` |\n\
-        | **Captured Timestamp** | `{}` |\n",
+        | **Captured Timestamp** | `{}` (Local Time) |\n",
         os_display,
         os_build,
         cpu_brand,
@@ -407,19 +550,37 @@ pub fn extract_system_diagnostics(
     }
 }
 
-fn chrono_free_timestamp() -> String {
-    // Generate simple readable UTC/Local timestamp without adding heavy crates
-    match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
-        Ok(d) => {
-            let secs = d.as_secs();
-            let days = secs / 86400;
-            let day_secs = secs % 86400;
-            let hours = day_secs / 3600;
-            let mins = (day_secs % 3600) / 60;
-            let s = day_secs % 60;
-            format!("Day {} {:02}:{:02}:{:02} UTC", days, hours, mins, s)
-        }
-        Err(_) => "Timestamp Unavailable".to_string(),
+#[cfg(target_os = "windows")]
+fn get_local_timestamp() -> String {
+    #[repr(C)]
+    struct SYSTEMTIME {
+        w_year: u16,
+        w_month: u16,
+        w_day_of_week: u16,
+        w_day: u16,
+        w_hour: u16,
+        w_minute: u16,
+        w_second: u16,
+        w_milliseconds: u16,
     }
+
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn GetLocalTime(lp_system_time: *mut SYSTEMTIME);
+    }
+
+    unsafe {
+        let mut st = std::mem::zeroed::<SYSTEMTIME>();
+        GetLocalTime(&mut st);
+        format!(
+            "{:04}-{:02}-{:02} {:02}:{:02}:{:02}",
+            st.w_year, st.w_month, st.w_day, st.w_hour, st.w_minute, st.w_second
+        )
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn get_local_timestamp() -> String {
+    "Local Time".to_string()
 }
 

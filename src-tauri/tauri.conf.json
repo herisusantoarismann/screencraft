@@ -15,7 +15,7 @@
         "label": "main",
         "title": "screencraft",
         "fullscreen": false,
-        "width": 380,
+        "width": 440,
         "height": 64,
         "transparent": true,
         "decorations": false,

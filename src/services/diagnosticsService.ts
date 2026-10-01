@@ -130,3 +130,4 @@ export async function attachDiagnosticsFooter(
     img.src = imageDataUrl;
   });
 }
+

@@ -17,3 +17,4 @@ export interface SystemDiagnostics {
   compact_stamp: string;
   markdown_table: string;
 }
+

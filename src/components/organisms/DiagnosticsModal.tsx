@@ -76,9 +76,11 @@ export const DiagnosticsModal: React.FC<DiagnosticsModalProps> = ({
                 </span>
               </div>
             </div>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-indigo-950 border border-indigo-500/40 text-indigo-300">
-              Verified OS
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-indigo-950 border border-indigo-500/40 text-indigo-300">
+                🕒 {diagnostics.timestamp}
+              </span>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -212,3 +214,4 @@ export const DiagnosticsModal: React.FC<DiagnosticsModalProps> = ({
     </div>
   );
 };
+

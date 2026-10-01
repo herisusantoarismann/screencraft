@@ -24,17 +24,17 @@ export const StandbyFloatingBar: React.FC<StandbyFloatingBarProps> = ({
 
   return (
     <div
-      className={`fixed top-1 left-1/2 -translate-x-1/2 w-[370px] h-[56px] pointer-events-auto flex items-center justify-between px-3.5 py-2 bg-neutral-900/95 backdrop-blur-md border border-neutral-700/80 rounded-2xl shadow-2xl text-white select-none box-border z-50 transition-all duration-150 ease-out ${
+      className={`fixed top-1 left-1/2 -translate-x-1/2 w-[430px] h-[56px] pointer-events-auto flex items-center justify-between px-4 py-2 bg-neutral-900/95 backdrop-blur-md border border-neutral-700/80 rounded-2xl shadow-2xl text-white select-none box-border z-50 transition-all duration-150 ease-out ${
         isHidden ? "opacity-0 scale-95 pointer-events-none" : "opacity-100 scale-100"
       }`}
     >
       {/* Brand / Logo */}
-      <FloatingBrand />
+      <FloatingBrand className="pr-2" />
 
       <Separator size="sm" />
 
       {/* Action Buttons: Screenshot & Record */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2.5 px-1">
         {/* Screenshot Button */}
         <button
           type="button"

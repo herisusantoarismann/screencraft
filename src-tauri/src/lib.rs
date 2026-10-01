@@ -134,7 +134,7 @@ fn enter_floating_bar_mode(window: WebviewWindow) -> Result<(), String> {
     let _ = window.hide();
     let _ = window.set_fullscreen(false);
     let _ = window.set_always_on_top(true);
-    let width = 380.0;
+    let width = 440.0;
     let height = 64.0;
     let _ = window.set_size(tauri::LogicalSize::new(width, height));
 
