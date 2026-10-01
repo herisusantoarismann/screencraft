@@ -148,6 +148,73 @@ export const KonvaStageCanvas: React.FC<KonvaStageCanvasProps> = ({
       );
     }
 
+    if (shape.type === "blur") {
+      return (
+        <Shape
+          key={shape.id}
+          x={shape.x}
+          y={shape.y}
+          width={shape.width}
+          height={shape.height}
+          listening={activeTool === "select"}
+          draggable={activeTool === "select"}
+          sceneFunc={(context, konvaShape) => {
+            const ctx = context._context as CanvasRenderingContext2D;
+            const w = konvaShape.width();
+            const h = konvaShape.height();
+            const absPos = konvaShape.getAbsolutePosition();
+
+            if (w < 2 || h < 2 || !capturedImage) return;
+
+            const natWidth = capturedImage.naturalWidth || capturedImage.width || dimensions.width;
+            const natHeight = capturedImage.naturalHeight || capturedImage.height || dimensions.height;
+
+            const scaleX = natWidth / dimensions.width;
+            const scaleY = natHeight / dimensions.height;
+
+            const sx = Math.max(0, Math.floor(absPos.x * scaleX));
+            const sy = Math.max(0, Math.floor(absPos.y * scaleY));
+            const sw = Math.min(Math.floor(w * scaleX), natWidth - sx);
+            const sh = Math.min(Math.floor(h * scaleY), natHeight - sy);
+
+            if (sw <= 0 || sh <= 0) return;
+
+            // Smart Redact Pixelation Mosaic Effect
+            const blockSize = 9;
+            const tinyW = Math.max(1, Math.round(w / blockSize));
+            const tinyH = Math.max(1, Math.round(h / blockSize));
+
+            const offscreen = document.createElement("canvas");
+            offscreen.width = tinyW;
+            offscreen.height = tinyH;
+            const offCtx = offscreen.getContext("2d");
+
+            if (offCtx) {
+              offCtx.imageSmoothingEnabled = true;
+              offCtx.drawImage(capturedImage, sx, sy, sw, sh, 0, 0, tinyW, tinyH);
+
+              ctx.save();
+              ctx.beginPath();
+              ctx.rect(0, 0, w, h);
+              ctx.clip();
+
+              ctx.imageSmoothingEnabled = false;
+              ctx.drawImage(offscreen, 0, 0, tinyW, tinyH, 0, 0, w, h);
+
+              // Subtle security privacy outline
+              ctx.strokeStyle = "rgba(244, 63, 94, 0.4)";
+              ctx.lineWidth = 1;
+              ctx.strokeRect(0, 0, w, h);
+
+              ctx.restore();
+            }
+
+            context.fillStrokeShape(konvaShape);
+          }}
+        />
+      );
+    }
+
     return null;
   };
 
@@ -159,6 +226,7 @@ export const KonvaStageCanvas: React.FC<KonvaStageCanvasProps> = ({
         return "default";
       case "stepBadge":
         return "pointer";
+      case "blur":
       case "flowBuilder":
       case "laser":
       case "ocr":

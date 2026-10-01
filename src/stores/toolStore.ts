@@ -5,6 +5,7 @@ export type ToolType =
   | "arrow"
   | "rect"
   | "pen"
+  | "blur"
   | "crop"
   | "stepBadge"
   | "eyedropper"

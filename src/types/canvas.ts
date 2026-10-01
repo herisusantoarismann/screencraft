@@ -54,11 +54,20 @@ export interface StepBadgeAnnotation extends BaseAnnotation {
   radius: number;
 }
 
+export interface BlurAnnotation extends BaseAnnotation {
+  type: "blur";
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export type Annotation =
   | RectAnnotation
   | ArrowAnnotation
   | PenAnnotation
-  | StepBadgeAnnotation;
+  | StepBadgeAnnotation
+  | BlurAnnotation;
 
 export interface Point {
   x: number;

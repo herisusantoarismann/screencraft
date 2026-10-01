@@ -343,6 +343,15 @@ export const CapturePage: React.FC = () => {
           width: 0,
           height: 0,
         });
+      } else if (activeTool === "blur") {
+        setCurrentDrawing({
+          ...base,
+          type: "blur",
+          x: pos.x,
+          y: pos.y,
+          width: 0,
+          height: 0,
+        });
       } else if (activeTool === "arrow") {
         setCurrentDrawing({
           ...base,
@@ -439,7 +448,7 @@ export const CapturePage: React.FC = () => {
       // Update Standard Drawing Drag Preview
       if (!isDrawing || !currentDrawing || !startPoint) return;
 
-      if (currentDrawing.type === "rect") {
+      if (currentDrawing.type === "rect" || currentDrawing.type === "blur") {
         const x = Math.min(startPoint.x, pos.x);
         const y = Math.min(startPoint.y, pos.y);
         const width = Math.abs(pos.x - startPoint.x);
@@ -558,7 +567,7 @@ export const CapturePage: React.FC = () => {
 
     let isValid = false;
 
-    if (currentDrawing.type === "rect") {
+    if (currentDrawing.type === "rect" || currentDrawing.type === "blur") {
       isValid = currentDrawing.width > 3 && currentDrawing.height > 3;
     } else if (currentDrawing.type === "arrow") {
       const [x1, y1, x2, y2] = currentDrawing.points;

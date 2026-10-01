@@ -4,6 +4,7 @@ import {
   ArrowUpRight,
   Square,
   Pencil,
+  EyeOff,
   Crop,
   ListOrdered,
   Pipette,
@@ -70,6 +71,15 @@ export const AnnotationButtonGroup: React.FC<AnnotationButtonGroupProps> = ({
         activeColor="blue"
         onClick={() => onSelectTool("pen")}
         icon={<Pencil className="w-4 h-4" />}
+      />
+
+      {/* Smart Redact (Blur & Pixelate - Pilar 2) */}
+      <IconButton
+        title="Smart Redact / Blur & Pixelate (Samarkan Data Sensitif - Pilar 2)"
+        active={activeTool === "blur"}
+        activeColor="rose"
+        onClick={() => onSelectTool("blur")}
+        icon={<EyeOff className="w-4 h-4" />}
       />
 
       {/* Step Badge */}
