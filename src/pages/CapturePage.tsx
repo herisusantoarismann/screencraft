@@ -143,6 +143,8 @@ export const CapturePage: React.FC = () => {
         useState<boolean>(false);
     const [isDiagnosticsModalOpen, setIsDiagnosticsModalOpen] =
         useState<boolean>(false);
+    const [isComparisonModalOpen, setIsComparisonModalOpen] =
+        useState<boolean>(false);
     const [includeDiagnosticsStamp, setIncludeDiagnosticsStamp] =
         useState<boolean>(true);
     const [diagnostics, setDiagnostics] = useState<SystemDiagnostics | null>(
@@ -918,6 +920,7 @@ export const CapturePage: React.FC = () => {
             isOcrProcessing={isOcrProcessing}
             isWebhookModalOpen={isWebhookModalOpen}
             isDiagnosticsModalOpen={isDiagnosticsModalOpen}
+            isComparisonModalOpen={isComparisonModalOpen}
             includeDiagnosticsStamp={includeDiagnosticsStamp}
             diagnostics={diagnostics}
             ripples={ripples}
@@ -936,6 +939,7 @@ export const CapturePage: React.FC = () => {
             onOpenWebhookModal={setIsWebhookModalOpen}
             onOpenMarkdownModal={setIsMarkdownModalOpen}
             onOpenDiagnosticsModal={setIsDiagnosticsModalOpen}
+            onOpenComparisonModal={setIsComparisonModalOpen}
             onToggleDiagnosticsStamp={() =>
                 setIncludeDiagnosticsStamp((prev) => !prev)
             }

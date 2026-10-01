@@ -25,6 +25,7 @@ import {
   VideoTrimModal,
   WebhookModal,
   DiagnosticsModal,
+  VisualComparisonModal,
 } from "../organisms";
 import { EyedropperLoupe, OcrIndicator, Toast } from "../molecules";
 import { ShutterFlash, RippleEffect } from "../atoms";
@@ -68,6 +69,7 @@ export interface ScreenCraftTemplateProps {
   isOcrProcessing: boolean;
   isWebhookModalOpen: boolean;
   isDiagnosticsModalOpen: boolean;
+  isComparisonModalOpen?: boolean;
   includeDiagnosticsStamp: boolean;
   diagnostics: SystemDiagnostics | null;
   ripples: ClickRipple[];
@@ -88,6 +90,7 @@ export interface ScreenCraftTemplateProps {
   onOpenWebhookModal: (open: boolean) => void;
   onOpenMarkdownModal: (open: boolean) => void;
   onOpenDiagnosticsModal: (open: boolean) => void;
+  onOpenComparisonModal?: (open: boolean) => void;
   onToggleDiagnosticsStamp: () => void;
   onResetCropArea: () => void;
   onClearAnnotations: () => void;
@@ -140,6 +143,7 @@ export const ScreenCraftTemplate: React.FC<ScreenCraftTemplateProps> = ({
   isOcrProcessing,
   isWebhookModalOpen,
   isDiagnosticsModalOpen,
+  isComparisonModalOpen,
   includeDiagnosticsStamp,
   diagnostics,
   ripples,
@@ -158,6 +162,7 @@ export const ScreenCraftTemplate: React.FC<ScreenCraftTemplateProps> = ({
   onOpenWebhookModal,
   onOpenMarkdownModal,
   onOpenDiagnosticsModal,
+  onOpenComparisonModal,
   onToggleDiagnosticsStamp,
   onResetCropArea,
   onClearAnnotations,
@@ -252,6 +257,7 @@ export const ScreenCraftTemplate: React.FC<ScreenCraftTemplateProps> = ({
           onDownloadPNG={onDownloadPNG}
           onOpenWebhookModal={() => onOpenWebhookModal(true)}
           onOpenMarkdownModal={() => onOpenMarkdownModal(true)}
+          onOpenComparisonModal={() => onOpenComparisonModal?.(true)}
           onResetCropArea={onResetCropArea}
           onClearAnnotations={onClearAnnotations}
           onCancelCapture={onCancelCapture}
@@ -375,6 +381,14 @@ export const ScreenCraftTemplate: React.FC<ScreenCraftTemplateProps> = ({
         isOpen={isDiagnosticsModalOpen}
         diagnostics={diagnostics}
         onClose={() => onOpenDiagnosticsModal(false)}
+      />
+
+      {/* Figma vs Live Slicing Comparison Modal */}
+      <VisualComparisonModal
+        isOpen={Boolean(isComparisonModalOpen)}
+        capturedImage={capturedImage}
+        getImageDataUrlOrBlob={onGetImageDataUrlOrBlob}
+        onClose={() => onOpenComparisonModal?.(false)}
       />
 
       {/* Mobile-Style Camera Shutter Flash Overlay */}
