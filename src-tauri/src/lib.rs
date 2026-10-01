@@ -8,6 +8,22 @@ use tauri::{
 };
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
+mod diagnostics;
+
+#[tauri::command]
+fn get_system_diagnostics(window: WebviewWindow) -> Result<diagnostics::SystemDiagnostics, String> {
+    let mut res_str = None;
+    let mut scale = None;
+
+    if let Ok(Some(monitor)) = window.current_monitor() {
+        let size = monitor.size();
+        res_str = Some(format!("{}x{}", size.width, size.height));
+        scale = Some(monitor.scale_factor());
+    }
+
+    Ok(diagnostics::extract_system_diagnostics(res_str.as_deref(), scale))
+}
+
 fn do_capture_screen() -> Result<String, String> {
     let monitors = xcap::Monitor::all().map_err(|e| format!("Failed to list monitors: {e}"))?;
     if monitors.is_empty() {
@@ -410,7 +426,8 @@ pub fn run() {
             trigger_screenshot,
             save_file_to_downloads,
             send_slack_webhook,
-            send_discord_webhook
+            send_discord_webhook,
+            get_system_diagnostics
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

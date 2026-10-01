@@ -8,6 +8,7 @@ import {
   Link as LinkIcon,
   MessageSquare,
   Sparkles,
+  ShieldCheck,
 } from "lucide-react";
 import {
   getLastWebhookUrl,
@@ -17,12 +18,14 @@ import {
   sendToSlackWebhook,
   type WebhookType,
 } from "../../services/webhookDispatcher";
+import type { SystemDiagnostics } from "../../types/diagnostics";
 
 interface WebhookModalProps {
   isOpen: boolean;
   onClose: () => void;
   getImageDataUrlOrBlob: () => Promise<string | Blob | null>;
   initialNotes?: string;
+  diagnostics?: SystemDiagnostics | null;
 }
 
 export const WebhookModal: React.FC<WebhookModalProps> = ({
@@ -30,9 +33,11 @@ export const WebhookModal: React.FC<WebhookModalProps> = ({
   onClose,
   getImageDataUrlOrBlob,
   initialNotes = "",
+  diagnostics,
 }) => {
   const [webhookUrl, setWebhookUrl] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
+  const [attachSpecs, setAttachSpecs] = useState<boolean>(true);
   const [detectedType, setDetectedType] = useState<WebhookType>("unknown");
   const [isSending, setIsSending] = useState<boolean>(false);
   const [feedback, setFeedback] = useState<{
@@ -87,11 +92,19 @@ export const WebhookModal: React.FC<WebhookModalProps> = ({
       let success = false;
       const type = detectWebhookType(trimmedUrl);
 
+      // Append environment & hardware specs table if toggle is on
+      let finalMessage = notes;
+      if (attachSpecs && diagnostics) {
+        finalMessage = notes.trim()
+          ? `${notes.trim()}\n\n${diagnostics.markdown_table}`
+          : diagnostics.markdown_table;
+      }
+
       if (type === "slack") {
-        success = await sendToSlackWebhook(trimmedUrl, imageData, notes);
+        success = await sendToSlackWebhook(trimmedUrl, imageData, finalMessage);
       } else {
         // Default to Discord (or multipart)
-        success = await sendToDiscordWebhook(trimmedUrl, imageData, notes);
+        success = await sendToDiscordWebhook(trimmedUrl, imageData, finalMessage);
       }
 
       if (success) {
@@ -184,6 +197,22 @@ export const WebhookModal: React.FC<WebhookModalProps> = ({
               className="w-full px-3 py-2 bg-neutral-950/90 border border-neutral-700/80 rounded-xl text-xs text-neutral-200 placeholder-neutral-500 focus:outline-hidden focus:border-indigo-500 resize-none transition-colors"
             />
           </div>
+
+          {/* Toggle: Include Hardware & Environment Specs */}
+          {diagnostics && (
+            <label className="flex items-center gap-2.5 p-2.5 bg-neutral-950/60 border border-neutral-800 rounded-xl cursor-pointer hover:border-indigo-500/40 transition-colors select-none">
+              <input
+                type="checkbox"
+                checked={attachSpecs}
+                onChange={(e) => setAttachSpecs(e.target.checked)}
+                className="rounded accent-indigo-600 w-4 h-4 cursor-pointer"
+              />
+              <div className="flex items-center gap-1.5 text-xs text-neutral-300">
+                <ShieldCheck className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                <span>Sertakan Spesifikasi Hardware & Environment (Pilar 1)</span>
+              </div>
+            </label>
+          )}
 
           {/* Inline Feedback Toast */}
           {feedback && (

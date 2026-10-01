@@ -17,6 +17,11 @@ import type {
   Point,
   StepBadgeAnnotation,
 } from "../types/canvas";
+import type { SystemDiagnostics } from "../types/diagnostics";
+import {
+  getSystemDiagnostics,
+  attachDiagnosticsFooter,
+} from "../services/diagnosticsService";
 import { ScreenCraftTemplate } from "../components/templates";
 
 export const CapturePage: React.FC = () => {
@@ -127,6 +132,9 @@ export const CapturePage: React.FC = () => {
 
   const [isMarkdownModalOpen, setIsMarkdownModalOpen] = useState<boolean>(false);
   const [isWebhookModalOpen, setIsWebhookModalOpen] = useState<boolean>(false);
+  const [isDiagnosticsModalOpen, setIsDiagnosticsModalOpen] = useState<boolean>(false);
+  const [includeDiagnosticsStamp, setIncludeDiagnosticsStamp] = useState<boolean>(true);
+  const [diagnostics, setDiagnostics] = useState<SystemDiagnostics | null>(null);
 
   const activeNode = nodes.find((n) => n.id === activeNodeId) || null;
 
@@ -213,6 +221,15 @@ export const CapturePage: React.FC = () => {
       setCropArea(null);
       resetStepCounter();
       resetFlow();
+
+      // Automatically fetch environment & hardware diagnostics for QA inspection & watermark
+      getSystemDiagnostics()
+        .then((diag) => {
+          setDiagnostics(diag);
+        })
+        .catch((err) => {
+          console.error("[CapturePage] Failed to fetch system diagnostics:", err);
+        });
     }
   }, [capturedImage, resetStepCounter, resetFlow]);
 
@@ -612,9 +629,25 @@ export const CapturePage: React.FC = () => {
     return dataUrl;
   }, [cropArea]);
 
+  // Export helper: attach optional diagnostics watermark stamp if enabled
+  const getFinalExportDataUrl = useCallback(async (): Promise<string | null> => {
+    const rawUrl = generateExportDataUrl();
+    if (!rawUrl) return null;
+
+    if (includeDiagnosticsStamp && diagnostics) {
+      try {
+        return await attachDiagnosticsFooter(rawUrl, diagnostics);
+      } catch (err) {
+        console.error("[CapturePage] Failed to attach diagnostics footer:", err);
+        return rawUrl;
+      }
+    }
+    return rawUrl;
+  }, [generateExportDataUrl, includeDiagnosticsStamp, diagnostics]);
+
   // Export: Copy to OS Clipboard via Rust native injection
   const handleCopyToClipboard = useCallback(async () => {
-    const dataUrl = generateExportDataUrl();
+    const dataUrl = await getFinalExportDataUrl();
     if (!dataUrl) return;
 
     setIsCopying(true);
@@ -630,11 +663,11 @@ export const CapturePage: React.FC = () => {
     } finally {
       setIsCopying(false);
     }
-  }, [generateExportDataUrl, closeOverlay]);
+  }, [getFinalExportDataUrl, closeOverlay]);
 
   // Export: Download PNG locally
-  const handleDownloadPNG = useCallback(() => {
-    const dataUrl = generateExportDataUrl();
+  const handleDownloadPNG = useCallback(async () => {
+    const dataUrl = await getFinalExportDataUrl();
     if (!dataUrl) return;
 
     const a = document.createElement("a");
@@ -643,7 +676,8 @@ export const CapturePage: React.FC = () => {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-  }, [generateExportDataUrl]);
+  }, [getFinalExportDataUrl]);
+
   // Full cancellation of screenshot session returning cleanly to standby floating bar
   const handleFullCancelCapture = useCallback(async () => {
     setActiveTool("select");
@@ -654,6 +688,7 @@ export const CapturePage: React.FC = () => {
     setOcrModal({ isOpen: false, text: "", copied: false });
     setIsMarkdownModalOpen(false);
     setIsWebhookModalOpen(false);
+    setIsDiagnosticsModalOpen(false);
     setActiveNodeId(null);
     resetStepCounter();
     resetFlow();
@@ -681,6 +716,10 @@ export const CapturePage: React.FC = () => {
       }
       if (isWebhookModalOpen) {
         setIsWebhookModalOpen(false);
+        return;
+      }
+      if (isDiagnosticsModalOpen) {
+        setIsDiagnosticsModalOpen(false);
         return;
       }
       if (activeNodeId) {
@@ -717,6 +756,7 @@ export const CapturePage: React.FC = () => {
     ocrModal.isOpen,
     isMarkdownModalOpen,
     isWebhookModalOpen,
+    isDiagnosticsModalOpen,
     activeNodeId,
     cropArea,
     ocrArea,
@@ -759,6 +799,9 @@ export const CapturePage: React.FC = () => {
       ocrModal={ocrModal}
       isOcrProcessing={isOcrProcessing}
       isWebhookModalOpen={isWebhookModalOpen}
+      isDiagnosticsModalOpen={isDiagnosticsModalOpen}
+      includeDiagnosticsStamp={includeDiagnosticsStamp}
+      diagnostics={diagnostics}
       ripples={ripples}
       showShutterFlash={showShutterFlash}
       isFlashActive={isFlashActive}
@@ -774,6 +817,8 @@ export const CapturePage: React.FC = () => {
       onDownloadPNG={handleDownloadPNG}
       onOpenWebhookModal={setIsWebhookModalOpen}
       onOpenMarkdownModal={setIsMarkdownModalOpen}
+      onOpenDiagnosticsModal={setIsDiagnosticsModalOpen}
+      onToggleDiagnosticsStamp={() => setIncludeDiagnosticsStamp((prev) => !prev)}
       onResetCropArea={() => setCropArea(null)}
       onClearAnnotations={clearAnnotations}
       onCancelCapture={() => void handleFullCancelCapture()}
@@ -795,7 +840,7 @@ export const CapturePage: React.FC = () => {
       }}
       onCopyToClipboardWithImage={handleCopyToClipboard}
       onGetImageDataUrlOrBlob={async () => {
-        const url = generateExportDataUrl();
+        const url = await getFinalExportDataUrl();
         return url || "";
       }}
     />

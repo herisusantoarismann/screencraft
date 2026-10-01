@@ -24,9 +24,11 @@ import {
   PresentationOverlay,
   VideoTrimModal,
   WebhookModal,
+  DiagnosticsModal,
 } from "../organisms";
 import { EyedropperLoupe, OcrIndicator, Toast } from "../molecules";
 import { ShutterFlash, RippleEffect } from "../atoms";
+import type { SystemDiagnostics } from "../../types/diagnostics";
 
 export interface ScreenCraftTemplateProps {
   // Layout & Recording State
@@ -65,6 +67,9 @@ export interface ScreenCraftTemplateProps {
   ocrModal: OcrModalState;
   isOcrProcessing: boolean;
   isWebhookModalOpen: boolean;
+  isDiagnosticsModalOpen: boolean;
+  includeDiagnosticsStamp: boolean;
+  diagnostics: SystemDiagnostics | null;
   ripples: ClickRipple[];
   showShutterFlash: boolean;
   isFlashActive: boolean;
@@ -82,6 +87,8 @@ export interface ScreenCraftTemplateProps {
   onDownloadPNG: () => void;
   onOpenWebhookModal: (open: boolean) => void;
   onOpenMarkdownModal: (open: boolean) => void;
+  onOpenDiagnosticsModal: (open: boolean) => void;
+  onToggleDiagnosticsStamp: () => void;
   onResetCropArea: () => void;
   onClearAnnotations: () => void;
   onCancelCapture: () => void;
@@ -131,6 +138,9 @@ export const ScreenCraftTemplate: React.FC<ScreenCraftTemplateProps> = ({
   ocrModal,
   isOcrProcessing,
   isWebhookModalOpen,
+  isDiagnosticsModalOpen,
+  includeDiagnosticsStamp,
+  diagnostics,
   ripples,
   showShutterFlash,
   isFlashActive,
@@ -146,6 +156,8 @@ export const ScreenCraftTemplate: React.FC<ScreenCraftTemplateProps> = ({
   onDownloadPNG,
   onOpenWebhookModal,
   onOpenMarkdownModal,
+  onOpenDiagnosticsModal,
+  onToggleDiagnosticsStamp,
   onResetCropArea,
   onClearAnnotations,
   onCancelCapture,
@@ -204,6 +216,9 @@ export const ScreenCraftTemplate: React.FC<ScreenCraftTemplateProps> = ({
           }
           isCopying={isCopying}
           copySuccess={copySuccess}
+          includeDiagnosticsStamp={includeDiagnosticsStamp}
+          onToggleDiagnosticsStamp={onToggleDiagnosticsStamp}
+          onOpenDiagnosticsModal={() => onOpenDiagnosticsModal(true)}
           onSelectTool={onSelectTool}
           onSelectColor={onSelectColor}
           onCopy={onCopy}
@@ -283,6 +298,7 @@ export const ScreenCraftTemplate: React.FC<ScreenCraftTemplateProps> = ({
       <FlowMarkdownModal
         isOpen={isMarkdownModalOpen}
         nodes={flowNodes}
+        diagnostics={diagnostics}
         onCopyToClipboardWithImage={onCopyToClipboardWithImage}
         onClose={() => onOpenMarkdownModal(false)}
       />
@@ -316,6 +332,14 @@ export const ScreenCraftTemplate: React.FC<ScreenCraftTemplateProps> = ({
         initialNotes={
           flowNodes.length > 0 ? exportFlowToMarkdown(flowNodes) : ""
         }
+        diagnostics={diagnostics}
+      />
+
+      {/* QA Hardware & Environment Diagnostics Modal */}
+      <DiagnosticsModal
+        isOpen={isDiagnosticsModalOpen}
+        diagnostics={diagnostics}
+        onClose={() => onOpenDiagnosticsModal(false)}
       />
 
       {/* Mobile-Style Camera Shutter Flash Overlay */}

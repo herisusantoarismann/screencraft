@@ -1,11 +1,13 @@
 import React, { useState } from "react";
-import { Workflow, X, Copy, Check, Download } from "lucide-react";
+import { Workflow, X, Copy, Check, Download, ShieldCheck } from "lucide-react";
 import type { FlowNode } from "../../stores/flowStore";
 import { exportFlowToMarkdown } from "../../stores/flowStore";
+import type { SystemDiagnostics } from "../../types/diagnostics";
 
 export interface FlowMarkdownModalProps {
   isOpen: boolean;
   nodes: FlowNode[];
+  diagnostics?: SystemDiagnostics | null;
   onCopyToClipboardWithImage: () => Promise<void>;
   onClose: () => void;
 }
@@ -13,14 +15,20 @@ export interface FlowMarkdownModalProps {
 export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
   isOpen,
   nodes,
+  diagnostics,
   onCopyToClipboardWithImage,
   onClose,
 }) => {
   const [markdownCopied, setMarkdownCopied] = useState(false);
+  const [attachSpecs, setAttachSpecs] = useState(true);
 
   if (!isOpen) return null;
 
-  const markdownContent = exportFlowToMarkdown(nodes);
+  const flowMarkdown = exportFlowToMarkdown(nodes);
+  const markdownContent =
+    attachSpecs && diagnostics
+      ? `${flowMarkdown}\n${diagnostics.markdown_table}`
+      : flowMarkdown;
 
   const handleCopyMarkdownOnly = () => {
     void navigator.clipboard.writeText(markdownContent);
@@ -77,6 +85,23 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
             rows={8}
             className="w-full p-3 bg-neutral-950/80 border border-neutral-800 rounded-xl text-xs font-mono text-neutral-200 select-text focus:outline-hidden focus:border-purple-500/60 resize-y"
           />
+
+          {/* Toggle Specs Table */}
+          {diagnostics && (
+            <label className="flex items-center gap-2.5 p-2 bg-neutral-950/60 border border-neutral-800 rounded-xl cursor-pointer hover:border-purple-500/40 transition-colors select-none">
+              <input
+                type="checkbox"
+                checked={attachSpecs}
+                onChange={(e) => setAttachSpecs(e.target.checked)}
+                className="rounded accent-purple-600 w-4 h-4 cursor-pointer"
+              />
+              <div className="flex items-center gap-1.5 text-xs text-neutral-300">
+                <ShieldCheck className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                <span>Sertakan Spesifikasi Hardware & Environment (Pilar 1)</span>
+              </div>
+            </label>
+          )}
+
           {markdownCopied && (
             <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium">
               <Check className="w-3.5 h-3.5" />

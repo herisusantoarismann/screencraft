@@ -16,6 +16,9 @@ export interface CanvasToolbarProps {
   hasAnnotationsOrNodes: boolean;
   isCopying: boolean;
   copySuccess: boolean;
+  includeDiagnosticsStamp: boolean;
+  onToggleDiagnosticsStamp: () => void;
+  onOpenDiagnosticsModal: () => void;
   onSelectTool: (tool: ToolType) => void;
   onSelectColor: (color: string) => void;
   onCopy: () => void;
@@ -37,6 +40,9 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
   hasAnnotationsOrNodes,
   isCopying,
   copySuccess,
+  includeDiagnosticsStamp,
+  onToggleDiagnosticsStamp,
+  onOpenDiagnosticsModal,
   onSelectTool,
   onSelectColor,
   onCopy,
@@ -77,6 +83,9 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
         flowNodesCount={flowNodesCount}
         cropArea={cropArea}
         hasAnnotationsOrNodes={hasAnnotationsOrNodes}
+        includeDiagnosticsStamp={includeDiagnosticsStamp}
+        onToggleDiagnosticsStamp={onToggleDiagnosticsStamp}
+        onOpenDiagnosticsModal={onOpenDiagnosticsModal}
         onCopy={onCopy}
         onDownloadPNG={onDownloadPNG}
         onOpenWebhookModal={onOpenWebhookModal}

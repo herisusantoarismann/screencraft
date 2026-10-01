@@ -1,4 +1,3 @@
-import React from "react";
 import {
   Copy,
   Download,
@@ -8,6 +7,8 @@ import {
   X,
   Check,
   Loader2,
+  ShieldCheck,
+  Cpu,
 } from "lucide-react";
 import type { CropArea } from "../../types/canvas";
 import { IconButton } from "../atoms/IconButton";
@@ -18,6 +19,9 @@ export interface ExportActionGroupProps {
   flowNodesCount: number;
   cropArea: CropArea | null;
   hasAnnotationsOrNodes: boolean;
+  includeDiagnosticsStamp: boolean;
+  onToggleDiagnosticsStamp: () => void;
+  onOpenDiagnosticsModal: () => void;
   onCopy: () => void;
   onDownloadPNG: () => void;
   onOpenWebhookModal: () => void;
@@ -34,6 +38,9 @@ export const ExportActionGroup: React.FC<ExportActionGroupProps> = ({
   flowNodesCount,
   cropArea,
   hasAnnotationsOrNodes,
+  includeDiagnosticsStamp,
+  onToggleDiagnosticsStamp,
+  onOpenDiagnosticsModal,
   onCopy,
   onDownloadPNG,
   onOpenWebhookModal,
@@ -45,6 +52,39 @@ export const ExportActionGroup: React.FC<ExportActionGroupProps> = ({
 }) => {
   return (
     <div className={`flex items-center gap-1.5 ${className}`}>
+      {/* Diagnostics Watermark Stamp Toggle */}
+      <IconButton
+        title={
+          includeDiagnosticsStamp
+            ? "Watermark Footer Specs Hardware Aktif (Klik untuk nonaktifkan)"
+            : "Aktifkan Watermark Footer Specs Hardware (Pilar 1)"
+        }
+        variant={includeDiagnosticsStamp ? "primary" : "secondary"}
+        onClick={onToggleDiagnosticsStamp}
+        icon={
+          <ShieldCheck
+            className={`w-3.5 h-3.5 ${
+              includeDiagnosticsStamp ? "text-emerald-300" : "text-neutral-400"
+            }`}
+          />
+        }
+        label="Stamp"
+        className={
+          includeDiagnosticsStamp
+            ? "bg-indigo-600/90 hover:bg-indigo-600 border border-indigo-400/50 shadow-md shadow-indigo-600/25"
+            : ""
+        }
+      />
+
+      {/* Diagnostics Hardware Specs Inspector Modal */}
+      <IconButton
+        title="Lihat Detail Hardware Specs & Display DPI (QA)"
+        variant="secondary"
+        onClick={onOpenDiagnosticsModal}
+        icon={<Cpu className="w-3.5 h-3.5 text-purple-400" />}
+        label="Specs"
+      />
+
       {/* Copy to Clipboard */}
       <IconButton
         title="Salin ke Clipboard"
