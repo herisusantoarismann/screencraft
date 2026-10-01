@@ -25,6 +25,7 @@ export interface CanvasToolbarProps {
   onDownloadPNG: () => void;
   onOpenWebhookModal: () => void;
   onOpenMarkdownModal: () => void;
+  onOpenComparisonModal?: () => void;
   onResetCropArea: () => void;
   onClearAnnotations: () => void;
   onCancelCapture: () => void;
@@ -49,6 +50,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
   onDownloadPNG,
   onOpenWebhookModal,
   onOpenMarkdownModal,
+  onOpenComparisonModal,
   onResetCropArea,
   onClearAnnotations,
   onCancelCapture,
@@ -90,6 +92,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
         onDownloadPNG={onDownloadPNG}
         onOpenWebhookModal={onOpenWebhookModal}
         onOpenMarkdownModal={onOpenMarkdownModal}
+        onOpenComparisonModal={onOpenComparisonModal}
         onResetCropArea={onResetCropArea}
         onClearAnnotations={onClearAnnotations}
         onCancelCapture={onCancelCapture}

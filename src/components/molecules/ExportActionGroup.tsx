@@ -9,6 +9,7 @@ import {
     Loader2,
     ShieldCheck,
     Cpu,
+    Columns2,
 } from "lucide-react";
 import type { CropArea } from "../../types/canvas";
 import { IconButton } from "../atoms/IconButton";
@@ -26,6 +27,7 @@ export interface ExportActionGroupProps {
     onDownloadPNG: () => void;
     onOpenWebhookModal: () => void;
     onOpenMarkdownModal: () => void;
+    onOpenComparisonModal?: () => void;
     onResetCropArea: () => void;
     onClearAnnotations: () => void;
     onCancelCapture: () => void;
@@ -45,6 +47,7 @@ export const ExportActionGroup: React.FC<ExportActionGroupProps> = ({
     onDownloadPNG,
     onOpenWebhookModal,
     onOpenMarkdownModal,
+    onOpenComparisonModal,
     onResetCropArea,
     onClearAnnotations,
     onCancelCapture,
@@ -144,6 +147,16 @@ export const ExportActionGroup: React.FC<ExportActionGroupProps> = ({
                     }
                     className="p-1.5 rounded-xl"
                 />
+
+                {onOpenComparisonModal && (
+                    <IconButton
+                        title="Figma vs Live Slicing Comparison (Diff Slider & Overlay)"
+                        variant="secondary"
+                        onClick={onOpenComparisonModal}
+                        icon={<Columns2 className="w-3.5 h-3.5 text-pink-400" />}
+                        className="p-1.5 rounded-xl"
+                    />
+                )}
             </div>
 
             {/* 4. Reset Crop Area Badge if active */}
