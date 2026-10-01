@@ -104,6 +104,7 @@ export interface ScreenCraftTemplateProps {
   onCloseOcrModal: () => void;
   onCopyOcrAgain: (text: string) => void;
   onCopyToClipboardWithImage: () => Promise<void>;
+  onCopyScreenshotOnly?: () => Promise<boolean>;
   onGetImageDataUrlOrBlob: () => Promise<string | Blob>;
 }
 
@@ -173,6 +174,7 @@ export const ScreenCraftTemplate: React.FC<ScreenCraftTemplateProps> = ({
   onCloseOcrModal,
   onCopyOcrAgain,
   onCopyToClipboardWithImage,
+  onCopyScreenshotOnly,
   onGetImageDataUrlOrBlob,
 }) => {
   // Dedicated mini widget mode when live recording is active
@@ -301,6 +303,8 @@ export const ScreenCraftTemplate: React.FC<ScreenCraftTemplateProps> = ({
         annotations={annotations}
         diagnostics={diagnostics}
         onCopyToClipboardWithImage={onCopyToClipboardWithImage}
+        onCopyScreenshotOnly={onCopyScreenshotOnly}
+        onGetImageDataUrlOrBlob={onGetImageDataUrlOrBlob}
         onClose={() => onOpenMarkdownModal(false)}
       />
 

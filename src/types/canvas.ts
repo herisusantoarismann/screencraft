@@ -70,13 +70,14 @@ export type StampType =
   | "category-ui"
   | "category-perf"
   | "category-security"
-  | "category-typo";
+  | "category-typo"
+  | "custom";
 
 export interface StampAnnotation extends BaseAnnotation {
   type: "stamp";
   x: number;
   y: number;
-  stampId: StampType;
+  stampId: StampType | string;
   label: string;
   emoji: string;
   badgeColor: string;

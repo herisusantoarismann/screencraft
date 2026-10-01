@@ -10,7 +10,10 @@ import {
   Terminal,
   FileCode2,
   Sparkles,
-  Layers,
+  Minus,
+  Maximize2,
+  ImageIcon,
+  Keyboard,
 } from "lucide-react";
 import type { FlowNode } from "../../stores/flowStore";
 import { exportFlowToMarkdown } from "../../stores/flowStore";
@@ -23,18 +26,20 @@ export interface FlowMarkdownModalProps {
   annotations?: Annotation[];
   diagnostics?: SystemDiagnostics | null;
   onCopyToClipboardWithImage: () => Promise<void>;
+  onCopyScreenshotOnly?: () => Promise<boolean>;
+  onGetImageDataUrlOrBlob?: () => Promise<string | Blob>;
   onClose: () => void;
 }
 
 type OutputFormat = "jira" | "github";
 
-const SEVERITY_OPTIONS = [
+const PRESET_SEVERITIES = [
   { id: "critical", label: "Critical / Blocker", emoji: "🔴", color: "text-red-400 border-red-500/50 bg-red-950/40" },
   { id: "major", label: "Major Defect", emoji: "🟠", color: "text-orange-400 border-orange-500/50 bg-orange-950/40" },
   { id: "minor", label: "Minor / Cosmetic", emoji: "🟡", color: "text-yellow-400 border-yellow-500/50 bg-yellow-950/40" },
 ];
 
-const CATEGORY_OPTIONS = [
+const PRESET_CATEGORIES = [
   "[BUG]",
   "[UI/CSS GLITCH]",
   "[PERF / LAG]",
@@ -48,16 +53,25 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
   annotations = [],
   diagnostics,
   onCopyToClipboardWithImage,
+  onCopyScreenshotOnly,
+  onGetImageDataUrlOrBlob,
   onClose,
 }) => {
-  // Mode tabs
+  // Mode tabs & format
   const [activeTab, setActiveTab] = useState<"qaTicket" | "flowDoc">("qaTicket");
   const [outputFormat, setOutputFormat] = useState<OutputFormat>("jira");
+  const [isMinimized, setIsMinimized] = useState(false);
 
   // Form Fields
   const [title, setTitle] = useState("");
   const [severity, setSeverity] = useState("Critical / Blocker");
+  const [isCustomSeverity, setIsCustomSeverity] = useState(false);
+  const [customSeverityInput, setCustomSeverityInput] = useState("");
+
   const [category, setCategory] = useState("[BUG]");
+  const [isCustomCategory, setIsCustomCategory] = useState(false);
+  const [customCategoryInput, setCustomCategoryInput] = useState("");
+
   const [preconditions, setPreconditions] = useState("");
   const [steps, setSteps] = useState("");
   const [expectedResult, setExpectedResult] = useState("");
@@ -72,21 +86,34 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
 
+    setIsMinimized(false);
+
     // Detect stamps
     const stamps = annotations.filter((a): a is StampAnnotation => a.type === "stamp");
     const sevStamp = stamps.find((s) => s.stampId.startsWith("severity-"));
-    const catStamp = stamps.find((s) => s.stampId.startsWith("category-"));
+    const catStamp = stamps.find(
+      (s) => s.stampId.startsWith("category-") || s.stampId === "custom"
+    );
 
     if (sevStamp) {
       setSeverity(sevStamp.label);
+      setIsCustomSeverity(false);
     } else {
       setSeverity("Critical / Blocker");
+      setIsCustomSeverity(false);
     }
 
     if (catStamp) {
       setCategory(catStamp.label);
+      if (!PRESET_CATEGORIES.includes(catStamp.label)) {
+        setIsCustomCategory(true);
+        setCustomCategoryInput(catStamp.label);
+      } else {
+        setIsCustomCategory(false);
+      }
     } else {
       setCategory("[BUG]");
+      setIsCustomCategory(false);
     }
 
     // Auto-detect Title
@@ -133,6 +160,18 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
 
   if (!isOpen) return null;
 
+  const effectiveSeverity = isCustomSeverity
+    ? customSeverityInput.trim() || "Unspecified Severity"
+    : severity;
+
+  const effectiveCategory = isCustomCategory
+    ? customCategoryInput.trim()
+      ? customCategoryInput.trim().startsWith("[")
+        ? customCategoryInput.trim()
+        : `[${customCategoryInput.trim()}]`
+      : "[ISSUE]"
+    : category;
+
   // Build Jira Wiki Format
   const buildJiraMarkup = (): string => {
     const jiraSteps = steps
@@ -146,7 +185,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
       )
       .join("\n");
 
-    let out = `h2. {color:#ef4444}*${severity}* - ${category} ${title}{color}\n\n`;
+    let out = `h2. {color:#ef4444}*${effectiveSeverity}* - ${effectiveCategory} ${title}{color}\n\n`;
     out += `*Preconditions:*\n${preconditions}\n\n`;
     out += `*Steps to Reproduce:*\n${jiraSteps || "# Lakukan langkah pengujian"}\n\n`;
     out += `*Expected Result:*\n${expectedResult}\n\n`;
@@ -178,11 +217,14 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
   // Build GitHub / Linear GFM Format
   const buildGitHubMarkup = (): string => {
     let sevEmoji = "🟡";
-    if (severity.toLowerCase().includes("critical")) sevEmoji = "🔴";
-    else if (severity.toLowerCase().includes("major")) sevEmoji = "🟠";
+    if (effectiveSeverity.toLowerCase().includes("critical") || effectiveSeverity.toLowerCase().includes("p0")) {
+      sevEmoji = "🔴";
+    } else if (effectiveSeverity.toLowerCase().includes("major") || effectiveSeverity.toLowerCase().includes("p1")) {
+      sevEmoji = "🟠";
+    }
 
-    let out = `## 🐛 ${category} ${title}\n\n`;
-    out += `**Severity:** ${sevEmoji} \`${severity}\` | **Category:** \`${category}\`\n\n`;
+    let out = `## 🐛 ${effectiveCategory} ${title}\n\n`;
+    out += `**Severity:** ${sevEmoji} \`${effectiveSeverity}\` | **Category:** \`${effectiveCategory}\`\n\n`;
     out += `### 📋 Preconditions\n${preconditions}\n\n`;
     out += `### 🔁 Steps to Reproduce\n${steps}\n\n`;
     out += `### 🎯 Expected vs Actual Result\n- **Expected:** ${expectedResult}\n- **Actual:** ${actualResult}\n\n`;
@@ -207,36 +249,147 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
       ? buildJiraMarkup()
       : buildGitHubMarkup();
 
-  const handleCopyFormatted = (format: OutputFormat) => {
+  const handleCopyTextOnly = (format: OutputFormat) => {
     setOutputFormat(format);
     const text = format === "jira" ? buildJiraMarkup() : buildGitHubMarkup();
     void navigator.clipboard.writeText(text);
-    setCopiedStatus(format === "jira" ? "Jira format tersalin!" : "GitHub/Linear markdown tersalin!");
-    setTimeout(() => setCopiedStatus(null), 2500);
+    setCopiedStatus(
+      `Teks ${format === "jira" ? "Jira" : "GitHub"} tersalin! Tekan Alt+Tab untuk paste ke WA/Jira.`
+    );
+    setTimeout(() => setCopiedStatus(null), 4000);
   };
 
-  const handleCopyTicketAndImage = async () => {
-    void navigator.clipboard.writeText(currentCompiledContent);
-    await onCopyToClipboardWithImage();
-    setCopiedStatus("Tiket & screenshot berhasil disalin ke clipboard!");
-    setTimeout(() => {
-      onClose();
-      setCopiedStatus(null);
-    }, 1000);
+  const handleCopyScreenshotImage = async () => {
+    try {
+      if (onCopyScreenshotOnly) {
+        await onCopyScreenshotOnly();
+      } else {
+        await onCopyToClipboardWithImage();
+      }
+      setCopiedStatus("Gambar screenshot tersalin! Tekan Alt+Tab untuk paste ke WA/Jira.");
+    } catch (err) {
+      console.error("Failed to copy image:", err);
+      setCopiedStatus("Gagal menyalin gambar screenshot.");
+    }
+    setTimeout(() => setCopiedStatus(null), 4000);
   };
 
-  const handleDownloadMd = () => {
-    const blob = new Blob([currentCompiledContent], { type: "text/markdown" });
+  const handleDownloadFile = async () => {
+    let finalContent = currentCompiledContent;
+
+    // In .md format, embed screenshot as Base64 image so the file contains the image!
+    if (outputFormat === "github" && onGetImageDataUrlOrBlob) {
+      try {
+        const img = await onGetImageDataUrlOrBlob();
+        if (typeof img === "string" && img.startsWith("data:image")) {
+          finalContent += `\n\n### 🖼️ Screenshot Evidence\n![Bug Screenshot](${img})\n`;
+        }
+      } catch (err) {
+        console.error("Failed to embed image in markdown:", err);
+      }
+    }
+
+    const ext = outputFormat === "jira" ? "txt" : "md";
+    const blob = new Blob([finalContent], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `bug-ticket-${Date.now()}.${outputFormat === "jira" ? "txt" : "md"}`;
+    a.download = `bug-ticket-${Date.now()}.${ext}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+
+    setCopiedStatus(`Berkas tiket bug (.${ext}) berhasil diunduh ke folder Downloads! 🎉`);
+    setTimeout(() => setCopiedStatus(null), 4000);
   };
 
+  // ---------------------------------------------------------------------------
+  // 1. MINIMIZED FLOATER MODE (When user collapses modal to paste freely)
+  // ---------------------------------------------------------------------------
+  if (isMinimized) {
+    return (
+      <div className="fixed bottom-6 right-6 z-50 w-84 bg-neutral-900/95 backdrop-blur-md border border-purple-500/70 rounded-2xl shadow-2xl p-4 text-white flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-4 duration-200 select-none">
+        {/* Floater Header */}
+        <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
+          <div className="flex items-center gap-1.5 text-purple-400 font-semibold text-xs">
+            <Bug className="w-4 h-4 text-purple-400" />
+            <span>Bug Ticket Floater</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setIsMinimized(false)}
+              className="p-1 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
+              title="Perbesar / Buka Modal Penuh"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1 text-neutral-400 hover:text-rose-400 rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
+              title="Tutup Tiket"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Floater Info */}
+        <div className="flex items-center justify-between text-[11px] bg-neutral-950/70 px-2.5 py-1.5 rounded-xl border border-neutral-800">
+          <span className="font-mono text-purple-300 font-semibold">{effectiveCategory}</span>
+          <span className="text-neutral-400 truncate max-w-[140px]">{effectiveSeverity}</span>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => handleCopyTextOnly(outputFormat)}
+            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white transition-all shadow-md shadow-purple-600/30 cursor-pointer"
+          >
+            <Copy className="w-3.5 h-3.5" />
+            <span>Copy Teks</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => void handleCopyScreenshotImage()}
+            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition-all shadow-md shadow-emerald-600/30 cursor-pointer"
+          >
+            <ImageIcon className="w-3.5 h-3.5" />
+            <span>Copy Gambar</span>
+          </button>
+        </div>
+
+        {/* Alt+Tab Educational Hint */}
+        <div className="flex items-start gap-1.5 p-2 bg-neutral-950/80 rounded-xl border border-neutral-800/80 text-[10px] text-neutral-300">
+          <Keyboard className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+          <span>Gunakan <strong>Alt + Tab</strong> untuk beralih ke WhatsApp atau Jira untuk paste.</span>
+        </div>
+
+        {/* Toast in Floater */}
+        {copiedStatus && (
+          <div className="p-2 bg-emerald-950/80 border border-emerald-500/40 rounded-xl text-[10px] text-emerald-300 font-medium animate-in fade-in duration-150">
+            {copiedStatus}
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-full py-1 rounded-lg text-xs font-medium text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer"
+        >
+          Selesai & Tutup
+        </button>
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // 2. FULL MODAL VIEW
+  // ---------------------------------------------------------------------------
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-xs z-50 p-3 sm:p-4 select-none">
       <div className="w-full max-w-2xl bg-neutral-900 border border-purple-500/50 rounded-2xl shadow-2xl overflow-hidden flex flex-col text-white animate-in fade-in zoom-in-95 duration-150 max-h-[92vh]">
@@ -278,6 +431,17 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
               )}
             </div>
 
+            {/* Minimize to Floater button */}
+            <button
+              type="button"
+              onClick={() => setIsMinimized(true)}
+              className="text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
+              title="Minimize ke Pojok Layar (Agar layar tidak terhalang)"
+            >
+              <Minus className="w-4 h-4" />
+            </button>
+
+            {/* Close button */}
             <button
               type="button"
               onClick={onClose}
@@ -290,7 +454,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
         </div>
 
         {/* Modal Scrollable Body */}
-        <div className="p-4 sm:p-5 flex flex-col gap-4 overflow-y-auto max-h-[calc(92vh-130px)]">
+        <div className="p-4 sm:p-5 flex flex-col gap-4 overflow-y-auto max-h-[calc(92vh-135px)]">
           {activeTab === "qaTicket" ? (
             <>
               {/* 1. Format Selection Tabs (Jira vs GitHub/Linear) */}
@@ -325,21 +489,27 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                 </div>
               </div>
 
-              {/* 2. Severity & Category Selectors */}
+              {/* 2. Severity & Category Selectors (with Custom option) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Severity */}
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] uppercase font-bold text-neutral-400">
-                    QA Severity Level
+                  <label className="text-[10px] uppercase font-bold text-neutral-400 flex items-center justify-between">
+                    <span>QA Severity Level</span>
+                    {isCustomSeverity && (
+                      <span className="text-[9px] text-cyan-400 font-mono">Custom Input</span>
+                    )}
                   </label>
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    {SEVERITY_OPTIONS.map((opt) => (
+                    {PRESET_SEVERITIES.map((opt) => (
                       <button
                         key={opt.id}
                         type="button"
-                        onClick={() => setSeverity(opt.label)}
+                        onClick={() => {
+                          setSeverity(opt.label);
+                          setIsCustomSeverity(false);
+                        }}
                         className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-                          severity === opt.label
+                          !isCustomSeverity && severity === opt.label
                             ? opt.color
                             : "border-neutral-800 bg-neutral-950/60 text-neutral-400 hover:border-neutral-700"
                         }`}
@@ -348,22 +518,48 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                         <span>{opt.label}</span>
                       </button>
                     ))}
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomSeverity(true)}
+                      className={`px-2 py-1 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                        isCustomSeverity
+                          ? "border-cyan-500/70 bg-cyan-950/60 text-cyan-300"
+                          : "border-neutral-800 bg-neutral-950/60 text-neutral-400 hover:border-neutral-700"
+                      }`}
+                    >
+                      ✏️ Custom...
+                    </button>
                   </div>
+                  {isCustomSeverity && (
+                    <input
+                      type="text"
+                      value={customSeverityInput}
+                      onChange={(e) => setCustomSeverityInput(e.target.value)}
+                      placeholder="Ketik severity custom (misal: P0 - Blocker)..."
+                      className="mt-1 px-2.5 py-1 bg-neutral-950 border border-cyan-500/60 rounded-lg text-xs text-white focus:outline-hidden"
+                    />
+                  )}
                 </div>
 
                 {/* Category Tags */}
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] uppercase font-bold text-neutral-400">
-                    Kategori Issue
+                  <label className="text-[10px] uppercase font-bold text-neutral-400 flex items-center justify-between">
+                    <span>Kategori Issue</span>
+                    {isCustomCategory && (
+                      <span className="text-[9px] text-purple-400 font-mono">Custom Tag</span>
+                    )}
                   </label>
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    {CATEGORY_OPTIONS.map((cat) => (
+                    {PRESET_CATEGORIES.map((cat) => (
                       <button
                         key={cat}
                         type="button"
-                        onClick={() => setCategory(cat)}
+                        onClick={() => {
+                          setCategory(cat);
+                          setIsCustomCategory(false);
+                        }}
                         className={`px-2 py-0.5 rounded-lg text-[11px] font-semibold font-mono border transition-all cursor-pointer ${
-                          category === cat
+                          !isCustomCategory && category === cat
                             ? "bg-purple-950/70 border-purple-500/70 text-purple-200"
                             : "border-neutral-800 bg-neutral-950/60 text-neutral-400 hover:border-neutral-700"
                         }`}
@@ -371,7 +567,27 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                         {cat}
                       </button>
                     ))}
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomCategory(true)}
+                      className={`px-2 py-0.5 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer ${
+                        isCustomCategory
+                          ? "border-purple-500/70 bg-purple-950/60 text-purple-200"
+                          : "border-neutral-800 bg-neutral-950/60 text-neutral-400 hover:border-neutral-700"
+                      }`}
+                    >
+                      ➕ Custom...
+                    </button>
                   </div>
+                  {isCustomCategory && (
+                    <input
+                      type="text"
+                      value={customCategoryInput}
+                      onChange={(e) => setCustomCategoryInput(e.target.value)}
+                      placeholder="Ketik kategori custom (misal: [REGRESSION])..."
+                      className="mt-1 px-2.5 py-1 bg-neutral-950 border border-purple-500/60 rounded-lg text-xs text-white focus:outline-hidden"
+                    />
+                  )}
                 </div>
               </div>
 
@@ -446,7 +662,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                 </div>
               </div>
 
-              {/* 6. Feature 7: Stack Trace & Console Error Slot */}
+              {/* 6. Stack Trace & Console Error Slot */}
               <div className="flex flex-col gap-1">
                 <div className="flex items-center justify-between">
                   <label className="text-[10px] uppercase font-bold text-rose-400 flex items-center gap-1.5">
@@ -491,7 +707,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                 <textarea
                   readOnly
                   value={currentCompiledContent}
-                  rows={6}
+                  rows={5}
                   className="w-full p-3 bg-neutral-950/90 border border-neutral-800 rounded-xl text-xs font-mono text-neutral-200 select-text focus:outline-hidden resize-none"
                 />
               </div>
@@ -508,11 +724,20 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
             </div>
           )}
 
-          {/* Feedback Toast */}
+          {/* Feedback Toast / Educational Alt+Tab Banner */}
           {copiedStatus && (
-            <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium px-3 py-1.5 bg-emerald-950/60 border border-emerald-500/30 rounded-xl animate-in fade-in duration-150">
-              <Check className="w-3.5 h-3.5" />
-              <span>{copiedStatus}</span>
+            <div className="flex items-center justify-between gap-2 p-2.5 bg-emerald-950/90 border border-emerald-500/50 rounded-xl text-xs text-emerald-300 font-medium animate-in fade-in duration-150">
+              <div className="flex items-center gap-2">
+                <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>{copiedStatus}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMinimized(true)}
+                className="px-2 py-0.5 bg-emerald-800/80 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-semibold transition-colors cursor-pointer shrink-0"
+              >
+                Minimize ke Pojok
+              </button>
             </div>
           )}
         </div>
@@ -522,8 +747,8 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
           <div className="flex items-center gap-1.5">
             <button
               type="button"
-              onClick={handleDownloadMd}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition-colors cursor-pointer"
+              onClick={() => void handleDownloadFile()}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-neutral-800 hover:bg-neutral-700 text-neutral-200 transition-colors cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Download .{outputFormat === "jira" ? "txt" : "md"}</span>
@@ -531,10 +756,10 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Copy for Jira */}
+            {/* Copy Teks Jira */}
             <button
               type="button"
-              onClick={() => handleCopyFormatted("jira")}
+              onClick={() => handleCopyTextOnly("jira")}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                 outputFormat === "jira"
                   ? "bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/30"
@@ -542,13 +767,13 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
               }`}
             >
               <Copy className="w-3.5 h-3.5" />
-              <span>Copy for Jira</span>
+              <span>Copy Teks Jira</span>
             </button>
 
-            {/* Copy for GitHub / Linear */}
+            {/* Copy Teks GitHub */}
             <button
               type="button"
-              onClick={() => handleCopyFormatted("github")}
+              onClick={() => handleCopyTextOnly("github")}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                 outputFormat === "github"
                   ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/30"
@@ -556,17 +781,17 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
               }`}
             >
               <Copy className="w-3.5 h-3.5" />
-              <span>Copy for GitHub</span>
+              <span>Copy Teks GitHub</span>
             </button>
 
-            {/* Copy Ticket & Image */}
+            {/* Copy Gambar Screenshot */}
             <button
               type="button"
-              onClick={() => void handleCopyTicketAndImage()}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white transition-all shadow-md shadow-purple-600/30 cursor-pointer"
+              onClick={() => void handleCopyScreenshotImage()}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white transition-all shadow-md shadow-purple-600/30 cursor-pointer"
             >
-              <Layers className="w-3.5 h-3.5" />
-              <span>Copy Ticket & Image</span>
+              <ImageIcon className="w-3.5 h-3.5" />
+              <span>Copy Gambar</span>
             </button>
           </div>
         </div>

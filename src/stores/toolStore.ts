@@ -95,9 +95,17 @@ export const STAMP_PRESETS: StampPreset[] = [
   },
 ];
 
+export interface CustomStampConfig {
+  label: string;
+  emoji: string;
+  badgeColor: string;
+  bgColor: string;
+}
+
 export interface ToolState {
   activeTool: ToolType;
   activeStamp: StampType;
+  customStamp: CustomStampConfig;
   strokeColor: string;
   strokeWidth: number;
   stepCounter: number;
@@ -105,6 +113,7 @@ export interface ToolState {
   spotlightRadius: number;
   setActiveTool: (tool: ToolType) => void;
   setActiveStamp: (stamp: StampType) => void;
+  setCustomStamp: (config: CustomStampConfig) => void;
   setStrokeColor: (color: string) => void;
   setStrokeWidth: (width: number) => void;
   incrementStepCounter: () => void;
@@ -117,6 +126,12 @@ export interface ToolState {
 export const useToolStore = create<ToolState>((set) => ({
   activeTool: "select",
   activeStamp: "severity-critical",
+  customStamp: {
+    label: "[CUSTOM]",
+    emoji: "📌",
+    badgeColor: "#38bdf8",
+    bgColor: "rgba(12, 74, 110, 0.95)",
+  },
   strokeColor: "#ef4444",
   strokeWidth: 3,
   stepCounter: 1,
@@ -124,6 +139,7 @@ export const useToolStore = create<ToolState>((set) => ({
   spotlightRadius: 120,
   setActiveTool: (activeTool: ToolType) => set({ activeTool }),
   setActiveStamp: (activeStamp: StampType) => set({ activeStamp }),
+  setCustomStamp: (customStamp: CustomStampConfig) => set({ customStamp }),
   setStrokeColor: (strokeColor: string) => set({ strokeColor }),
   setStrokeWidth: (strokeWidth: number) => set({ strokeWidth }),
   incrementStepCounter: () =>
