@@ -11,9 +11,15 @@ import {
   Loader2,
   Clock,
   RotateCcw,
+  Volume2,
+  VolumeX,
+  Mic,
+  Share2,
+  FileVideo,
 } from "lucide-react";
 import { useRecordStore } from "../../stores/recordStore";
 import { convertWebmToGif } from "../../services/gifConverter";
+import { compressVideoForPlatform } from "../../services/videoCompressor";
 
 const blobToBase64 = (blob: Blob): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -55,11 +61,15 @@ export const VideoTrimModal: React.FC = () => {
     isPreviewOpen,
     isConverting,
     conversionProgress,
+    isMicEnabled,
     setIsConverting,
     setConversionProgress,
     setIsPreviewOpen,
     resetRecording,
   } = useRecordStore();
+
+  const [compressingPlatform, setCompressingPlatform] = useState<"slack" | "jira" | null>(null);
+  const [isMuted, setIsMuted] = useState<boolean>(false);
 
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [duration, setDuration] = useState<number>(0);
@@ -303,6 +313,45 @@ export const VideoTrimModal: React.FC = () => {
     setTimeout(() => setFeedbackToast(null), 4000);
   }, [recordingBlob]);
 
+  // Compress for platform (Slack < 5MB or Jira < 10MB)
+  const handleCompressForPlatform = useCallback(
+    async (platform: "slack" | "jira") => {
+      if (!recordingBlob) return;
+
+      setCompressingPlatform(platform);
+      setIsConverting(true);
+      setConversionProgress(0);
+
+      try {
+        const result = await compressVideoForPlatform(
+          recordingBlob,
+          startTime,
+          endTime,
+          platform,
+          (progress) => setConversionProgress(progress)
+        );
+
+        const savedPath = await saveBlobFile(result.blob, result.fileName);
+        const platformName = platform === "slack" ? "Slack (< 5MB)" : "Jira (< 10MB)";
+
+        setFeedbackToast(
+          savedPath
+            ? `Video ${platformName} tersimpan di Downloads (${result.sizeMB} MB)!`
+            : `Video ${platformName} berhasil diunduh (${result.sizeMB} MB)!`
+        );
+        setTimeout(() => setFeedbackToast(null), 5000);
+      } catch (err) {
+        console.error(`[VideoTrimModal] ${platform} compression failed:`, err);
+        setFeedbackToast(`Gagal mengompresi video untuk ${platform}.`);
+        setTimeout(() => setFeedbackToast(null), 4000);
+      } finally {
+        setIsConverting(false);
+        setCompressingPlatform(null);
+      }
+    },
+    [recordingBlob, startTime, endTime, setIsConverting, setConversionProgress]
+  );
+
   if (!isPreviewOpen || !videoUrl) return null;
 
   const validDuration = duration > 0 ? duration : 1;
@@ -313,7 +362,7 @@ export const VideoTrimModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/80 backdrop-blur-md z-50 p-4 select-none">
-      <div className="w-full max-w-2xl bg-neutral-900 border border-neutral-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150 text-white">
+      <div className="w-full max-w-2xl sm:max-w-3xl bg-neutral-900 border border-neutral-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150 text-white">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-neutral-800 bg-neutral-950/60">
           <div className="flex items-center gap-2 text-rose-400 font-semibold text-sm">
@@ -322,6 +371,12 @@ export const VideoTrimModal: React.FC = () => {
             <span className="text-[11px] font-mono px-2 py-0.5 bg-rose-950/80 border border-rose-500/40 rounded-full text-rose-200">
               Durasi: {validDuration.toFixed(1)}s
             </span>
+            {isMicEnabled && (
+              <span className="flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 bg-emerald-950/80 border border-emerald-500/40 rounded-full text-emerald-300">
+                <Mic className="w-3 h-3 text-emerald-400" />
+                Voiceover Aktif
+              </span>
+            )}
           </div>
           <button
             type="button"
@@ -342,7 +397,7 @@ export const VideoTrimModal: React.FC = () => {
           <video
             ref={videoRef}
             src={videoUrl}
-            muted
+            muted={isMuted}
             playsInline
             preload="auto"
             onLoadedMetadata={handleLoadedMetadata}
@@ -374,6 +429,23 @@ export const VideoTrimModal: React.FC = () => {
               <Pause className="w-6 h-6" />
             ) : (
               <Play className="w-6 h-6 ml-0.5 text-rose-400" />
+            )}
+          </button>
+
+          {/* Mute/Unmute Audio Toggle */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsMuted((prev) => !prev);
+            }}
+            className="absolute bottom-3 right-3 p-2 rounded-xl bg-neutral-900/80 hover:bg-neutral-800 text-neutral-200 hover:text-white border border-white/10 shadow-lg transition-all"
+            title={isMuted ? "Bunyikan Audio (Unmute)" : "Bisukan Audio (Mute)"}
+          >
+            {isMuted ? (
+              <VolumeX className="w-4 h-4 text-rose-400" />
+            ) : (
+              <Volume2 className="w-4 h-4 text-emerald-400" />
             )}
           </button>
         </div>
@@ -539,7 +611,11 @@ export const VideoTrimModal: React.FC = () => {
               <div className="flex items-center justify-between text-xs font-semibold text-rose-300">
                 <span className="flex items-center gap-1.5">
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-400" />
-                  Mengonversi GIF via FFmpeg WebAssembly...
+                  {compressingPlatform === "slack"
+                    ? "Mengompresi video Fit to Slack (< 5MB)..."
+                    : compressingPlatform === "jira"
+                    ? "Mengompresi video Fit to Jira (< 10MB)..."
+                    : "Mengonversi GIF via FFmpeg WebAssembly..."}
                 </span>
                 <span>{conversionProgress}%</span>
               </div>
@@ -562,22 +638,55 @@ export const VideoTrimModal: React.FC = () => {
               resetRecording();
               void invoke("enter_floating_bar_mode");
             }}
-            className="px-3.5 py-1.5 rounded-xl text-xs font-medium text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
+            disabled={isConverting}
+            className="px-3.5 py-1.5 rounded-xl text-xs font-medium text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors disabled:opacity-50"
           >
             Tutup
           </button>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2">
             {/* Export as WebM */}
             <button
               type="button"
               onClick={() => void handleExportWebm()}
               disabled={isConverting}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-neutral-700 transition-all disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-neutral-700 transition-all disabled:opacity-50"
               title="Simpan rekaman WebM ke folder Downloads"
             >
               <Download className="w-3.5 h-3.5 text-blue-400" />
-              <span>Export WebM</span>
+              <span>WebM</span>
+            </button>
+
+            {/* Fit to Slack (< 5MB) */}
+            <button
+              type="button"
+              onClick={() => void handleCompressForPlatform("slack")}
+              disabled={isConverting}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-950/80 hover:bg-emerald-900 text-emerald-200 border border-emerald-500/40 transition-all disabled:opacity-50"
+              title="Kompres video otomatis agar ukuran < 5MB untuk Slack"
+            >
+              {compressingPlatform === "slack" ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
+              ) : (
+                <Share2 className="w-3.5 h-3.5 text-emerald-400" />
+              )}
+              <span>Slack (&lt; 5MB)</span>
+            </button>
+
+            {/* Fit to Jira (< 10MB) */}
+            <button
+              type="button"
+              onClick={() => void handleCompressForPlatform("jira")}
+              disabled={isConverting}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-950/80 hover:bg-blue-900 text-blue-200 border border-blue-500/40 transition-all disabled:opacity-50"
+              title="Kompres video otomatis agar ukuran < 10MB untuk Jira"
+            >
+              {compressingPlatform === "jira" ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400" />
+              ) : (
+                <FileVideo className="w-3.5 h-3.5 text-blue-400" />
+              )}
+              <span>Jira (&lt; 10MB)</span>
             </button>
 
             {/* Export as GIF (WASM) */}
@@ -585,15 +694,15 @@ export const VideoTrimModal: React.FC = () => {
               type="button"
               onClick={() => void handleExportGif()}
               disabled={isConverting}
-              className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white transition-all shadow-md shadow-rose-600/30 disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white transition-all shadow-md shadow-rose-600/30 disabled:opacity-50"
               title="Konversi dan simpan animasi GIF ke folder Downloads"
             >
-              {isConverting ? (
+              {isConverting && !compressingPlatform ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : (
                 <Sparkles className="w-3.5 h-3.5" />
               )}
-              <span>Export as GIF</span>
+              <span>Export GIF</span>
             </button>
           </div>
         </div>
