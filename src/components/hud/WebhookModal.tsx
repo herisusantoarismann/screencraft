@@ -64,6 +64,7 @@ export const WebhookModal: React.FC<WebhookModalProps> = ({
     const [attachSpecs, setAttachSpecs] = useState<boolean>(true);
     const [targetApp, setTargetApp] = useState<string>("");
     const [windowTitle, setWindowTitle] = useState<string>("");
+    const [isCustomApp, setIsCustomApp] = useState<boolean>(false);
     const [detectedType, setDetectedType] = useState<WebhookType>("unknown");
     const [isSending, setIsSending] = useState<boolean>(false);
     const [feedback, setFeedback] = useState<{
@@ -83,9 +84,25 @@ export const WebhookModal: React.FC<WebhookModalProps> = ({
             if (diagnostics) {
                 setTargetApp(diagnostics.active_window_app || "");
                 setWindowTitle(diagnostics.active_window_title || "");
+                setIsCustomApp(false);
             }
         }
     }, [isOpen, initialNotes, diagnostics]);
+
+    const handleAppSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const val = e.target.value;
+        if (val === "__custom__") {
+            setIsCustomApp(true);
+            setTargetApp("");
+        } else {
+            setIsCustomApp(false);
+            setTargetApp(val);
+            const matched = diagnostics?.available_apps?.find((a) => a.app_name === val);
+            if (matched && matched.window_title) {
+                setWindowTitle(matched.window_title);
+            }
+        }
+    };
 
     // Update detected type as user types
     const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -274,20 +291,50 @@ export const WebhookModal: React.FC<WebhookModalProps> = ({
                                         <span className="text-[10px] text-indigo-400 font-mono">Bisa Diedit Manual</span>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-2">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                        {/* Dropdown Aplikasi Aktif */}
                                         <div className="flex flex-col gap-1">
                                             <label className="text-[10px] font-semibold text-neutral-400">
-                                                Aplikasi
+                                                Aplikasi Aktif
                                             </label>
-                                            <input
-                                                type="text"
-                                                value={targetApp}
-                                                onChange={(e) => setTargetApp(e.target.value)}
-                                                placeholder="e.g. Google Chrome"
-                                                className="w-full px-2.5 py-1.5 bg-neutral-900 border border-neutral-700/80 rounded-lg text-xs text-white placeholder-neutral-500 focus:outline-hidden focus:border-indigo-500 transition-colors"
-                                            />
+                                            <select
+                                                value={isCustomApp ? "__custom__" : targetApp}
+                                                onChange={handleAppSelect}
+                                                className="w-full px-2 py-1.5 bg-neutral-900 border border-neutral-700/80 rounded-lg text-xs text-white focus:outline-hidden focus:border-indigo-500 transition-colors cursor-pointer"
+                                            >
+                                                {/* Detected current active app */}
+                                                {diagnostics.active_window_app && (
+                                                    <option value={diagnostics.active_window_app}>
+                                                        {diagnostics.active_window_app} (Terdeteksi)
+                                                    </option>
+                                                )}
+
+                                                {/* Other open application windows */}
+                                                {diagnostics.available_apps
+                                                    ?.filter((a) => a.app_name !== diagnostics.active_window_app)
+                                                    .map((a, idx) => (
+                                                        <option key={`${a.app_name}-${idx}`} value={a.app_name}>
+                                                            {a.app_name}
+                                                        </option>
+                                                    ))}
+
+                                                <option value="__custom__">✏️ Ketik Manual...</option>
+                                            </select>
+
+                                            {/* Input manual if custom selected */}
+                                            {isCustomApp && (
+                                                <input
+                                                    type="text"
+                                                    value={targetApp}
+                                                    onChange={(e) => setTargetApp(e.target.value)}
+                                                    placeholder="Nama aplikasi..."
+                                                    autoFocus
+                                                    className="w-full mt-1 px-2.5 py-1.5 bg-neutral-900 border border-indigo-500/80 rounded-lg text-xs text-white placeholder-neutral-500 focus:outline-hidden focus:border-indigo-400 transition-colors"
+                                                />
+                                            )}
                                         </div>
 
+                                        {/* Judul Window / Tab (Input Bebas) */}
                                         <div className="flex flex-col gap-1">
                                             <label className="text-[10px] font-semibold text-neutral-400">
                                                 Judul Window / Tab
@@ -296,7 +343,7 @@ export const WebhookModal: React.FC<WebhookModalProps> = ({
                                                 type="text"
                                                 value={windowTitle}
                                                 onChange={(e) => setWindowTitle(e.target.value)}
-                                                placeholder="e.g. Jira Ticket #12"
+                                                placeholder="e.g. Jira Ticket #12, Login Page"
                                                 className="w-full px-2.5 py-1.5 bg-neutral-900 border border-neutral-700/80 rounded-lg text-xs text-white placeholder-neutral-500 focus:outline-hidden focus:border-indigo-500 transition-colors"
                                             />
                                         </div>

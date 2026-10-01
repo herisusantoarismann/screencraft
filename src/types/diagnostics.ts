@@ -1,3 +1,9 @@
+export interface OpenAppInfo {
+  app_name: string;
+  window_title: string;
+  version: string;
+}
+
 export interface SystemDiagnostics {
   os_name: string;
   os_build: string;
@@ -16,5 +22,6 @@ export interface SystemDiagnostics {
   timestamp: string;
   compact_stamp: string;
   markdown_table: string;
+  available_apps: OpenAppInfo[];
 }
 

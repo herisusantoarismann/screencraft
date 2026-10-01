@@ -27,6 +27,7 @@ export async function getSystemDiagnostics(): Promise<SystemDiagnostics> {
       timestamp: new Date().toLocaleTimeString(),
       compact_stamp: `OS: Windows | Display: ${window.screen.width}x${window.screen.height} @ ${Math.round((window.devicePixelRatio || 1) * 100)}% | ScreenCraft QA`,
       markdown_table: "### Environment Diagnostics\n*(Unavailable)*\n",
+      available_apps: [],
     };
   }
 }

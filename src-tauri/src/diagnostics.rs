@@ -2,6 +2,13 @@ use serde::{Deserialize, Serialize};
 use sysinfo::System;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OpenAppInfo {
+    pub app_name: String,
+    pub window_title: String,
+    pub version: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SystemDiagnostics {
     pub os_name: String,
     pub os_build: String,
@@ -20,6 +27,7 @@ pub struct SystemDiagnostics {
     pub timestamp: String,
     pub compact_stamp: String,
     pub markdown_table: String,
+    pub available_apps: Vec<OpenAppInfo>,
 }
 
 #[cfg(target_os = "windows")]
@@ -151,10 +159,11 @@ mod win_ops {
         }
     }
 
-    pub fn get_active_window() -> (String, String, String) {
+    pub fn get_active_windows() -> (String, String, String, Vec<super::OpenAppInfo>) {
         unsafe {
             let my_pid = std::process::id();
             let mut target_hwnd: *mut std::ffi::c_void = std::ptr::null_mut();
+            let mut open_apps: Vec<super::OpenAppInfo> = Vec::new();
 
             // 1. Check GetForegroundWindow() first
             let fg_hwnd = GetForegroundWindow();
@@ -166,128 +175,150 @@ mod win_ops {
                 }
             }
 
-            // 2. If ScreenCraft is the foreground window (overlay / floating bar is focused),
-            // iterate top-level windows in Z-order to find the topmost non-ScreenCraft application!
-            if target_hwnd.is_null() {
-                const GW_HWNDNEXT: u32 = 2;
-                let mut curr = if !fg_hwnd.is_null() {
-                    GetWindow(fg_hwnd, GW_HWNDNEXT)
+            // 2. Iterate top-level windows in Z-order to collect all open user applications
+            const GW_HWNDNEXT: u32 = 2;
+            let mut curr = if !fg_hwnd.is_null() {
+                GetWindow(fg_hwnd, GW_HWNDNEXT)
+            } else {
+                GetTopWindow(std::ptr::null_mut())
+            };
+
+            let mut loop_count = 0;
+            while !curr.is_null() && loop_count < 200 {
+                loop_count += 1;
+
+                // Must be visible
+                if IsWindowVisible(curr) == 0 {
+                    curr = GetWindow(curr, GW_HWNDNEXT);
+                    continue;
+                }
+
+                // Must not be minimized
+                if IsIconic(curr) != 0 {
+                    curr = GetWindow(curr, GW_HWNDNEXT);
+                    continue;
+                }
+
+                // Must have a title length > 0
+                let tlen = GetWindowTextLengthW(curr);
+                if tlen <= 0 {
+                    curr = GetWindow(curr, GW_HWNDNEXT);
+                    continue;
+                }
+
+                // Check PID
+                let mut pid = 0u32;
+                GetWindowThreadProcessId(curr, &mut pid);
+                if pid == 0 || pid == my_pid {
+                    curr = GetWindow(curr, GW_HWNDNEXT);
+                    continue;
+                }
+
+                // Check Window Class to filter out Windows Shell & Desktop background elements
+                let mut class_buf = [0u16; 256];
+                let clen = GetClassNameW(curr, class_buf.as_mut_ptr(), 256);
+                let class_name = if clen > 0 {
+                    OsString::from_wide(&class_buf[..clen as usize])
+                        .to_string_lossy()
+                        .to_string()
                 } else {
-                    GetTopWindow(std::ptr::null_mut())
+                    String::new()
                 };
 
-                let mut loop_count = 0;
-                while !curr.is_null() && loop_count < 150 {
-                    loop_count += 1;
+                let c_lower = class_name.to_lowercase();
+                if c_lower.contains("shell_traywnd")
+                    || c_lower.contains("progman")
+                    || c_lower.contains("workerw")
+                    || c_lower.contains("shell_secondarytraywnd")
+                    || c_lower == "windows.ui.core.corewindow"
+                {
+                    curr = GetWindow(curr, GW_HWNDNEXT);
+                    continue;
+                }
 
-                    // Must be visible
-                    if IsWindowVisible(curr) == 0 {
-                        curr = GetWindow(curr, GW_HWNDNEXT);
-                        continue;
-                    }
+                // Check Window Title
+                let mut title_buf = [0u16; 512];
+                let len = GetWindowTextW(curr, title_buf.as_mut_ptr(), 512);
+                let title = if len > 0 {
+                    OsString::from_wide(&title_buf[..len as usize])
+                        .to_string_lossy()
+                        .to_string()
+                } else {
+                    String::new()
+                };
 
-                    // Must not be minimized
-                    if IsIconic(curr) != 0 {
-                        curr = GetWindow(curr, GW_HWNDNEXT);
-                        continue;
-                    }
+                let t_lower = title.to_lowercase();
+                if title.is_empty()
+                    || t_lower == "program manager"
+                    || t_lower == "windows shell experience host"
+                    || t_lower == "task switching"
+                    || t_lower.contains("screencraft")
+                {
+                    curr = GetWindow(curr, GW_HWNDNEXT);
+                    continue;
+                }
 
-                    // Must have a title length > 0
-                    let tlen = GetWindowTextLengthW(curr);
-                    if tlen <= 0 {
-                        curr = GetWindow(curr, GW_HWNDNEXT);
-                        continue;
-                    }
+                // Verify executable is not screencraft
+                let (exe_name, version_str, is_screencraft) = inspect_process(pid);
+                if is_screencraft || exe_name.to_lowercase().contains("screencraft") {
+                    curr = GetWindow(curr, GW_HWNDNEXT);
+                    continue;
+                }
 
-                    // Check PID
-                    let mut pid = 0u32;
-                    GetWindowThreadProcessId(curr, &mut pid);
-                    if pid == 0 || pid == my_pid {
-                        curr = GetWindow(curr, GW_HWNDNEXT);
-                        continue;
-                    }
-
-                    // Check Window Class to filter out Windows Shell & Desktop background elements
-                    let mut class_buf = [0u16; 256];
-                    let clen = GetClassNameW(curr, class_buf.as_mut_ptr(), 256);
-                    let class_name = if clen > 0 {
-                        OsString::from_wide(&class_buf[..clen as usize])
-                            .to_string_lossy()
-                            .to_string()
-                    } else {
-                        String::new()
-                    };
-
-                    let c_lower = class_name.to_lowercase();
-                    if c_lower.contains("shell_traywnd")
-                        || c_lower.contains("progman")
-                        || c_lower.contains("workerw")
-                        || c_lower.contains("shell_secondarytraywnd")
-                        || c_lower == "windows.ui.core.corewindow"
-                    {
-                        curr = GetWindow(curr, GW_HWNDNEXT);
-                        continue;
-                    }
-
-                    // Check Window Title
-                    let mut title_buf = [0u16; 512];
-                    let len = GetWindowTextW(curr, title_buf.as_mut_ptr(), 512);
-                    let title = if len > 0 {
-                        OsString::from_wide(&title_buf[..len as usize])
-                            .to_string_lossy()
-                            .to_string()
-                    } else {
-                        String::new()
-                    };
-
-                    let t_lower = title.to_lowercase();
-                    if title.is_empty()
-                        || t_lower == "program manager"
-                        || t_lower == "windows shell experience host"
-                        || t_lower == "task switching"
-                        || t_lower.contains("screencraft")
-                    {
-                        curr = GetWindow(curr, GW_HWNDNEXT);
-                        continue;
-                    }
-
-                    // Verify executable is not screencraft
-                    let (exe_name, _, is_screencraft) = inspect_process(pid);
-                    if is_screencraft || exe_name.to_lowercase().contains("screencraft") {
-                        curr = GetWindow(curr, GW_HWNDNEXT);
-                        continue;
-                    }
-
-                    // Topmost non-ScreenCraft user application found!
+                if target_hwnd.is_null() {
                     target_hwnd = curr;
+                }
+
+                if !open_apps.iter().any(|a| a.app_name == exe_name) {
+                    open_apps.push(super::OpenAppInfo {
+                        app_name: exe_name,
+                        window_title: title,
+                        version: version_str,
+                    });
+                }
+
+                if open_apps.len() >= 25 {
                     break;
                 }
+
+                curr = GetWindow(curr, GW_HWNDNEXT);
             }
 
-            if target_hwnd.is_null() {
-                return (
+            if !target_hwnd.is_null() {
+                let mut title_buf = [0u16; 512];
+                let len = GetWindowTextW(target_hwnd, title_buf.as_mut_ptr(), 512);
+                let title = if len > 0 {
+                    OsString::from_wide(&title_buf[..len as usize])
+                        .to_string_lossy()
+                        .to_string()
+                } else {
+                    "(Active Window)".to_string()
+                };
+
+                let mut pid = 0u32;
+                GetWindowThreadProcessId(target_hwnd, &mut pid);
+                let (exe_name, version_str, _) = inspect_process(pid);
+
+                if !open_apps.iter().any(|a| a.app_name == exe_name) {
+                    open_apps.insert(
+                        0,
+                        super::OpenAppInfo {
+                            app_name: exe_name.clone(),
+                            window_title: title.clone(),
+                            version: version_str.clone(),
+                        },
+                    );
+                }
+
+                (title, exe_name, version_str, open_apps)
+            } else {
+                (
                     "(Active Desktop)".to_string(),
                     "Desktop Application".to_string(),
                     "".to_string(),
-                );
+                    open_apps,
+                )
             }
-
-            let mut title_buf = [0u16; 512];
-            let len = GetWindowTextW(target_hwnd, title_buf.as_mut_ptr(), 512);
-            let title = if len > 0 {
-                OsString::from_wide(&title_buf[..len as usize])
-                    .to_string_lossy()
-                    .to_string()
-            } else {
-                "(Active Window)".to_string()
-            };
-
-            let mut pid = 0u32;
-            GetWindowThreadProcessId(target_hwnd, &mut pid);
-
-            let (exe_name, version_str, _) = inspect_process(pid);
-
-            (title, exe_name, version_str)
         }
     }
 
@@ -477,9 +508,14 @@ pub fn extract_system_diagnostics(
     let (gpu_name, gpu_driver) = ("Integrated Graphics".to_string(), "".to_string());
 
     #[cfg(target_os = "windows")]
-    let (win_title, app_name, app_ver) = win_ops::get_active_window();
+    let (win_title, app_name, app_ver, available_apps) = win_ops::get_active_windows();
     #[cfg(not(target_os = "windows"))]
-    let (win_title, app_name, app_ver) = ("(Desktop)".to_string(), "Browser/App".to_string(), "".to_string());
+    let (win_title, app_name, app_ver, available_apps) = (
+        "(Desktop)".to_string(),
+        "Browser/App".to_string(),
+        "".to_string(),
+        Vec::<OpenAppInfo>::new(),
+    );
 
     let now = get_local_timestamp();
 
@@ -547,6 +583,7 @@ pub fn extract_system_diagnostics(
         timestamp: now,
         compact_stamp,
         markdown_table,
+        available_apps,
     }
 }
 
