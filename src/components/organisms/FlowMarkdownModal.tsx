@@ -16,6 +16,7 @@ import {
     Maximize2,
     ImageIcon,
     Loader2,
+    Plus,
 } from "lucide-react";
 import type { FlowNode } from "../../stores/flowStore";
 import { exportFlowToMarkdown } from "../../stores/flowStore";
@@ -70,6 +71,28 @@ const PRESET_CATEGORIES = [
     "[TYPO]",
 ];
 
+const CUSTOM_SEVERITIES_KEY = "screencraft_custom_severities";
+const CUSTOM_CATEGORIES_KEY = "screencraft_custom_categories";
+
+const loadStoredCustoms = (key: string): string[] => {
+    try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch {
+        return [];
+    }
+};
+
+const saveStoredCustoms = (key: string, items: string[]) => {
+    try {
+        localStorage.setItem(key, JSON.stringify(items));
+    } catch (err) {
+        console.warn(`Failed to save ${key} to localStorage:`, err);
+    }
+};
+
 export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
     isOpen,
     isFloaterActive = false,
@@ -91,12 +114,74 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
     // Form Fields
     const [title, setTitle] = useState("");
     const [severity, setSeverity] = useState("Critical / Blocker");
-    const [isCustomSeverity, setIsCustomSeverity] = useState(false);
-    const [customSeverityInput, setCustomSeverityInput] = useState("");
-
     const [category, setCategory] = useState("[BUG]");
-    const [isCustomCategory, setIsCustomCategory] = useState(false);
-    const [customCategoryInput, setCustomCategoryInput] = useState("");
+
+    // Custom Options Stored in LocalStorage
+    const [customSeverities, setCustomSeverities] = useState<string[]>(() =>
+        loadStoredCustoms(CUSTOM_SEVERITIES_KEY),
+    );
+    const [customCategories, setCustomCategories] = useState<string[]>(() =>
+        loadStoredCustoms(CUSTOM_CATEGORIES_KEY),
+    );
+
+    const [isAddingSeverity, setIsAddingSeverity] = useState(false);
+    const [newSeverityInput, setNewSeverityInput] = useState("");
+
+    const [isAddingCategory, setIsAddingCategory] = useState(false);
+    const [newCategoryInput, setNewCategoryInput] = useState("");
+
+    const handleAddCustomSeverity = () => {
+        const val = newSeverityInput.trim();
+        if (!val) return;
+        if (
+            !customSeverities.includes(val) &&
+            !PRESET_SEVERITIES.some((s) => s.label === val)
+        ) {
+            const updated = [...customSeverities, val];
+            setCustomSeverities(updated);
+            saveStoredCustoms(CUSTOM_SEVERITIES_KEY, updated);
+        }
+        setSeverity(val);
+        setNewSeverityInput("");
+        setIsAddingSeverity(false);
+    };
+
+    const handleDeleteCustomSeverity = (target: string) => {
+        const updated = customSeverities.filter((s) => s !== target);
+        setCustomSeverities(updated);
+        saveStoredCustoms(CUSTOM_SEVERITIES_KEY, updated);
+        if (severity === target) {
+            setSeverity("Critical / Blocker");
+        }
+    };
+
+    const handleAddCustomCategory = () => {
+        let val = newCategoryInput.trim();
+        if (!val) return;
+        if (!val.startsWith("[")) {
+            val = `[${val}]`;
+        }
+        if (
+            !customCategories.includes(val) &&
+            !PRESET_CATEGORIES.includes(val)
+        ) {
+            const updated = [...customCategories, val];
+            setCustomCategories(updated);
+            saveStoredCustoms(CUSTOM_CATEGORIES_KEY, updated);
+        }
+        setCategory(val);
+        setNewCategoryInput("");
+        setIsAddingCategory(false);
+    };
+
+    const handleDeleteCustomCategory = (target: string) => {
+        const updated = customCategories.filter((c) => c !== target);
+        setCustomCategories(updated);
+        saveStoredCustoms(CUSTOM_CATEGORIES_KEY, updated);
+        if (category === target) {
+            setCategory("[BUG]");
+        }
+    };
 
     const [preconditions, setPreconditions] = useState("");
     const [steps, setSteps] = useState("");
@@ -127,23 +212,14 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
 
         if (sevStamp) {
             setSeverity(sevStamp.label);
-            setIsCustomSeverity(false);
         } else {
-            setSeverity("Critical / Blocker");
-            setIsCustomSeverity(false);
+            setSeverity((prev) => prev || "Critical / Blocker");
         }
 
         if (catStamp) {
             setCategory(catStamp.label);
-            if (!PRESET_CATEGORIES.includes(catStamp.label)) {
-                setIsCustomCategory(true);
-                setCustomCategoryInput(catStamp.label);
-            } else {
-                setIsCustomCategory(false);
-            }
         } else {
-            setCategory("[BUG]");
-            setIsCustomCategory(false);
+            setCategory((prev) => prev || "[BUG]");
         }
 
         // Auto-detect Title
@@ -201,17 +277,8 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
 
     if (!isOpen) return null;
 
-    const effectiveSeverity = isCustomSeverity
-        ? customSeverityInput.trim() || "Unspecified Severity"
-        : severity;
-
-    const effectiveCategory = isCustomCategory
-        ? customCategoryInput.trim()
-            ? customCategoryInput.trim().startsWith("[")
-                ? customCategoryInput.trim()
-                : `[${customCategoryInput.trim()}]`
-            : "[ISSUE]"
-        : category;
+    const effectiveSeverity = severity.trim() || "Critical / Blocker";
+    const effectiveCategory = category.trim() || "[BUG]";
 
     // Build Jira Wiki Format
     const buildJiraMarkup = (): string => {
@@ -547,7 +614,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                 <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-800 bg-neutral-950/70 shrink-0">
                     <div className="flex items-center gap-2 text-purple-400 font-semibold text-sm">
                         <Bug className="w-4 h-4 text-purple-400" />
-                        <span>QA Defect & Bug Ticket Formatter (Pilar 3)</span>
+                        <span>QA Defect & Bug Ticket Formatter</span>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -641,122 +708,268 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                                 </div>
                             </div>
 
-                            {/* 2. Severity & Category Selectors (with Custom option) */}
+                            {/* 2. Severity & Category Selectors (with Persistent Custom options) */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 {/* Severity */}
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-[10px] uppercase font-bold text-neutral-400 flex items-center justify-between">
-                                        <span>QA Severity Level</span>
-                                        {isCustomSeverity && (
-                                            <span className="text-[9px] text-cyan-400 font-mono">
-                                                Custom Input
-                                            </span>
-                                        )}
-                                    </label>
-                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                <div className="flex flex-col gap-1.5 p-2 rounded-xl bg-neutral-900/60 border border-neutral-800">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-[10px] uppercase font-bold text-neutral-400">
+                                            QA Severity Level
+                                        </label>
+                                        <span className="text-[10px] font-mono text-cyan-400 truncate max-w-[150px]">
+                                            {effectiveSeverity}
+                                        </span>
+                                    </div>
+
+                                    {/* Scrollable Badges Container */}
+                                    <div className="max-h-24 sm:max-h-28 overflow-y-auto pr-1 flex flex-wrap gap-1.5 scrollbar-thin scrollbar-thumb-neutral-700">
+                                        {/* Presets */}
                                         {PRESET_SEVERITIES.map((opt) => (
                                             <button
                                                 key={opt.id}
                                                 type="button"
-                                                onClick={() => {
-                                                    setSeverity(opt.label);
-                                                    setIsCustomSeverity(false);
-                                                }}
+                                                onClick={() =>
+                                                    setSeverity(opt.label)
+                                                }
                                                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-                                                    !isCustomSeverity &&
                                                     severity === opt.label
                                                         ? opt.color
-                                                        : "border-neutral-800 bg-neutral-950/60 text-neutral-400 hover:border-neutral-700"
+                                                        : "border-neutral-800 bg-neutral-950/60 text-neutral-400 hover:border-neutral-700 hover:text-neutral-200"
                                                 }`}
                                             >
                                                 <span>{opt.emoji}</span>
                                                 <span>{opt.label}</span>
                                             </button>
                                         ))}
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                setIsCustomSeverity(true)
-                                            }
-                                            className={`px-2 py-1 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-                                                isCustomSeverity
-                                                    ? "border-cyan-500/70 bg-cyan-950/60 text-cyan-300"
-                                                    : "border-neutral-800 bg-neutral-950/60 text-neutral-400 hover:border-neutral-700"
-                                            }`}
-                                        >
-                                            ✏️ Custom...
-                                        </button>
+
+                                        {/* Saved Custom Severities */}
+                                        {customSeverities.map((sev) => (
+                                            <div
+                                                key={sev}
+                                                onClick={() => setSeverity(sev)}
+                                                className={`group flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                                                    severity === sev
+                                                        ? "border-cyan-500/80 bg-cyan-950/80 text-cyan-200 shadow-xs"
+                                                        : "border-neutral-800 bg-neutral-950/60 text-neutral-400 hover:border-neutral-700 hover:text-neutral-300"
+                                                }`}
+                                                title={`Pilih severity: ${sev}`}
+                                            >
+                                                <span className="truncate max-w-[130px]">
+                                                    {sev}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDeleteCustomSeverity(
+                                                            sev,
+                                                        );
+                                                    }}
+                                                    className="p-0.5 rounded text-neutral-500 hover:text-red-400 hover:bg-neutral-800/80 transition-colors ml-0.5 cursor-pointer"
+                                                    title={`Hapus "${sev}" dari daftar custom`}
+                                                >
+                                                    <X className="w-3 h-3" />
+                                                </button>
+                                            </div>
+                                        ))}
+
+                                        {/* Trigger Add Custom */}
+                                        {!isAddingSeverity && (
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setIsAddingSeverity(true)
+                                                }
+                                                className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold border border-dashed border-neutral-700 bg-neutral-950/40 text-neutral-400 hover:text-cyan-300 hover:border-cyan-500/50 transition-all cursor-pointer"
+                                                title="Tambah severity custom baru"
+                                            >
+                                                <Plus className="w-3 h-3" />
+                                                <span>Custom</span>
+                                            </button>
+                                        )}
                                     </div>
-                                    {isCustomSeverity && (
-                                        <input
-                                            type="text"
-                                            value={customSeverityInput}
-                                            onChange={(e) =>
-                                                setCustomSeverityInput(
-                                                    e.target.value,
-                                                )
-                                            }
-                                            placeholder="Ketik severity custom (misal: P0 - Blocker)..."
-                                            className="mt-1 px-2.5 py-1 bg-neutral-950 border border-cyan-500/60 rounded-lg text-xs text-white focus:outline-hidden"
-                                        />
+
+                                    {/* Inline Add Custom Severity Input */}
+                                    {isAddingSeverity && (
+                                        <div className="flex items-center gap-1.5 pt-1.5 border-t border-neutral-800 animate-in fade-in duration-100">
+                                            <input
+                                                type="text"
+                                                autoFocus
+                                                value={newSeverityInput}
+                                                onChange={(e) =>
+                                                    setNewSeverityInput(
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter") {
+                                                        e.preventDefault();
+                                                        handleAddCustomSeverity();
+                                                    } else if (
+                                                        e.key === "Escape"
+                                                    ) {
+                                                        setIsAddingSeverity(
+                                                            false,
+                                                        );
+                                                        setNewSeverityInput("");
+                                                    }
+                                                }}
+                                                placeholder="Severity baru (mis: P0 - Hotfix)..."
+                                                className="px-2.5 py-1 bg-neutral-950 border border-cyan-500/70 rounded-lg text-xs text-white focus:outline-hidden flex-1"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={
+                                                    handleAddCustomSeverity
+                                                }
+                                                disabled={
+                                                    !newSeverityInput.trim()
+                                                }
+                                                className="px-2.5 py-1 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-40 text-white rounded-lg text-xs font-semibold cursor-pointer transition-colors"
+                                            >
+                                                Simpan
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setIsAddingSeverity(false);
+                                                    setNewSeverityInput("");
+                                                }}
+                                                className="px-2.5 py-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-lg text-xs cursor-pointer transition-colors"
+                                            >
+                                                Batal
+                                            </button>
+                                        </div>
                                     )}
                                 </div>
 
                                 {/* Category Tags */}
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-[10px] uppercase font-bold text-neutral-400 flex items-center justify-between">
-                                        <span>Kategori Issue</span>
-                                        {isCustomCategory && (
-                                            <span className="text-[9px] text-purple-400 font-mono">
-                                                Custom Tag
-                                            </span>
-                                        )}
-                                    </label>
-                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                <div className="flex flex-col gap-1.5 p-2 rounded-xl bg-neutral-900/60 border border-neutral-800">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-[10px] uppercase font-bold text-neutral-400">
+                                            Kategori Issue
+                                        </label>
+                                        <span className="text-[10px] font-mono text-purple-400 truncate max-w-[150px]">
+                                            {effectiveCategory}
+                                        </span>
+                                    </div>
+
+                                    {/* Scrollable Badges Container */}
+                                    <div className="max-h-24 sm:max-h-28 overflow-y-auto pr-1 flex flex-wrap gap-1.5 scrollbar-thin scrollbar-thumb-neutral-700">
+                                        {/* Presets */}
                                         {PRESET_CATEGORIES.map((cat) => (
                                             <button
                                                 key={cat}
                                                 type="button"
-                                                onClick={() => {
-                                                    setCategory(cat);
-                                                    setIsCustomCategory(false);
-                                                }}
+                                                onClick={() => setCategory(cat)}
                                                 className={`px-2 py-0.5 rounded-lg text-[11px] font-semibold font-mono border transition-all cursor-pointer ${
-                                                    !isCustomCategory &&
                                                     category === cat
-                                                        ? "bg-purple-950/70 border-purple-500/70 text-purple-200"
-                                                        : "border-neutral-800 bg-neutral-950/60 text-neutral-400 hover:border-neutral-700"
+                                                        ? "bg-purple-950/80 border-purple-500/80 text-purple-200"
+                                                        : "border-neutral-800 bg-neutral-950/60 text-neutral-400 hover:border-neutral-700 hover:text-neutral-200"
                                                 }`}
                                             >
                                                 {cat}
                                             </button>
                                         ))}
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                setIsCustomCategory(true)
-                                            }
-                                            className={`px-2 py-0.5 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer ${
-                                                isCustomCategory
-                                                    ? "border-purple-500/70 bg-purple-950/60 text-purple-200"
-                                                    : "border-neutral-800 bg-neutral-950/60 text-neutral-400 hover:border-neutral-700"
-                                            }`}
-                                        >
-                                            ➕ Custom...
-                                        </button>
+
+                                        {/* Saved Custom Categories */}
+                                        {customCategories.map((cat) => (
+                                            <div
+                                                key={cat}
+                                                onClick={() => setCategory(cat)}
+                                                className={`group flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-lg text-[11px] font-semibold font-mono border transition-all cursor-pointer ${
+                                                    category === cat
+                                                        ? "bg-purple-950/80 border-purple-500/80 text-purple-200 shadow-xs"
+                                                        : "border-neutral-800 bg-neutral-950/60 text-neutral-400 hover:border-neutral-700 hover:text-neutral-300"
+                                                }`}
+                                                title={`Pilih kategori: ${cat}`}
+                                            >
+                                                <span className="truncate max-w-[120px]">
+                                                    {cat}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDeleteCustomCategory(
+                                                            cat,
+                                                        );
+                                                    }}
+                                                    className="p-0.5 rounded text-neutral-500 hover:text-red-400 hover:bg-neutral-800/80 transition-colors ml-0.5 cursor-pointer"
+                                                    title={`Hapus "${cat}" dari daftar custom`}
+                                                >
+                                                    <X className="w-2.5 h-2.5" />
+                                                </button>
+                                            </div>
+                                        ))}
+
+                                        {/* Trigger Add Custom */}
+                                        {!isAddingCategory && (
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setIsAddingCategory(true)
+                                                }
+                                                className="flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-semibold border border-dashed border-neutral-700 bg-neutral-950/40 text-neutral-400 hover:text-purple-300 hover:border-purple-500/50 transition-all cursor-pointer"
+                                                title="Tambah kategori custom baru"
+                                            >
+                                                <Plus className="w-3 h-3" />
+                                                <span>Custom</span>
+                                            </button>
+                                        )}
                                     </div>
-                                    {isCustomCategory && (
-                                        <input
-                                            type="text"
-                                            value={customCategoryInput}
-                                            onChange={(e) =>
-                                                setCustomCategoryInput(
-                                                    e.target.value,
-                                                )
-                                            }
-                                            placeholder="Ketik kategori custom (misal: [REGRESSION])..."
-                                            className="mt-1 px-2.5 py-1 bg-neutral-950 border border-purple-500/60 rounded-lg text-xs text-white focus:outline-hidden"
-                                        />
+
+                                    {/* Inline Add Custom Category Input */}
+                                    {isAddingCategory && (
+                                        <div className="flex items-center gap-1.5 pt-1.5 border-t border-neutral-800 animate-in fade-in duration-100">
+                                            <input
+                                                type="text"
+                                                autoFocus
+                                                value={newCategoryInput}
+                                                onChange={(e) =>
+                                                    setNewCategoryInput(
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter") {
+                                                        e.preventDefault();
+                                                        handleAddCustomCategory();
+                                                    } else if (
+                                                        e.key === "Escape"
+                                                    ) {
+                                                        setIsAddingCategory(
+                                                            false,
+                                                        );
+                                                        setNewCategoryInput("");
+                                                    }
+                                                }}
+                                                placeholder="Kategori baru (mis: PAYMENT)..."
+                                                className="px-2 py-0.5 bg-neutral-950 border border-purple-500/70 rounded-lg text-xs text-white focus:outline-hidden flex-1"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={
+                                                    handleAddCustomCategory
+                                                }
+                                                disabled={
+                                                    !newCategoryInput.trim()
+                                                }
+                                                className="px-2.5 py-0.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 text-white rounded-lg text-xs font-semibold cursor-pointer transition-colors"
+                                            >
+                                                Simpan
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setIsAddingCategory(false);
+                                                    setNewCategoryInput("");
+                                                }}
+                                                className="px-2 py-0.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-lg text-xs cursor-pointer transition-colors"
+                                            >
+                                                Batal
+                                            </button>
+                                        </div>
                                     )}
                                 </div>
                             </div>
