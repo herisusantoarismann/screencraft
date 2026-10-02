@@ -188,7 +188,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
     const [expectedResult, setExpectedResult] = useState("");
     const [actualResult, setActualResult] = useState("");
     const [stackTrace, setStackTrace] = useState("");
-    const [attachSpecs, setAttachSpecs] = useState(true);
+    const [attachSpecs, setAttachSpecs] = useState(false);
 
     // Loading & Copy Feedback States
     const [isCopyingImage, setIsCopyingImage] = useState(false);
@@ -200,6 +200,8 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
     // Initialize and auto-populate when modal opens
     useEffect(() => {
         if (!isOpen) return;
+
+        setAttachSpecs(false);
 
         // Detect stamps
         const stamps = annotations.filter(

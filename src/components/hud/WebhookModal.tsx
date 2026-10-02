@@ -63,7 +63,7 @@ export const WebhookModal: React.FC<WebhookModalProps> = ({
     const [webhookUrl, setWebhookUrl] = useState<string>("");
     const [notes, setNotes] = useState<string>("");
     const [stackTrace, setStackTrace] = useState<string>("");
-    const [attachSpecs, setAttachSpecs] = useState<boolean>(true);
+    const [attachSpecs, setAttachSpecs] = useState<boolean>(false);
     const [targetApp, setTargetApp] = useState<string>("");
     const [windowTitle, setWindowTitle] = useState<string>("");
     const [isCustomApp, setIsCustomApp] = useState<boolean>(false);
@@ -84,6 +84,7 @@ export const WebhookModal: React.FC<WebhookModalProps> = ({
             setStackTrace("");
             setFeedback(null);
             setIsSending(false);
+            setAttachSpecs(false);
             if (diagnostics) {
                 setTargetApp(diagnostics.active_window_app || "");
                 setWindowTitle(diagnostics.active_window_title || "");

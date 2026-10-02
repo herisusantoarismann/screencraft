@@ -146,7 +146,7 @@ export const CapturePage: React.FC = () => {
     const [isComparisonModalOpen, setIsComparisonModalOpen] =
         useState<boolean>(false);
     const [includeDiagnosticsStamp, setIncludeDiagnosticsStamp] =
-        useState<boolean>(true);
+        useState<boolean>(false);
     const [diagnostics, setDiagnostics] = useState<SystemDiagnostics | null>(
         null,
     );
