@@ -40,7 +40,7 @@ export const StandbyFloatingBar: React.FC<StandbyFloatingBarProps> = ({
         {/* Screenshot Button */}
         <button
           type="button"
-          title="Ambil Screenshot & Buka Alat Edit (Crop, Coret-coret)"
+          title="Take Screenshot & Open Annotation Tools (Crop, Markup)"
           disabled={isCapturing || isTransitioning || isPreparingRecord}
           onClick={onTriggerScreenshot}
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-purple-600 hover:bg-purple-500 text-white transition-all shadow-md shadow-purple-600/30 cursor-pointer disabled:opacity-70 active:scale-95"
@@ -48,7 +48,7 @@ export const StandbyFloatingBar: React.FC<StandbyFloatingBarProps> = ({
           {isCapturing ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin text-purple-200" />
-              <span>Menangkap...</span>
+              <span>Capturing...</span>
             </>
           ) : (
             <>
@@ -61,7 +61,7 @@ export const StandbyFloatingBar: React.FC<StandbyFloatingBarProps> = ({
         {/* Record Button */}
         <button
           type="button"
-          title="Rekam Layar (GIF / WebM)"
+          title="Record Screen (GIF / WebM)"
           disabled={isPreparingRecord || isCapturing || isTransitioning}
           onClick={onStartRecording}
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-neutral-800 hover:bg-neutral-700 text-neutral-200 hover:text-white border border-neutral-700/60 transition-all cursor-pointer disabled:opacity-70 active:scale-95"
@@ -69,7 +69,7 @@ export const StandbyFloatingBar: React.FC<StandbyFloatingBarProps> = ({
           {isPreparingRecord ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin text-rose-400" />
-              <span>Menyiapkan...</span>
+              <span>Preparing...</span>
             </>
           ) : (
             <>
@@ -84,8 +84,8 @@ export const StandbyFloatingBar: React.FC<StandbyFloatingBarProps> = ({
           type="button"
           title={
             isMicEnabled
-              ? "Audio Memo (Mic): AKTIF (Suara Anda akan direkam bersama video)"
-              : "Audio Memo (Mic): NONAKTIF (Klik untuk rekam suara penjelasan bug)"
+              ? "Voiceover Memo (Mic): ON (Your voice will be recorded with video)"
+              : "Voiceover Memo (Mic): OFF (Click to record voiceover memo)"
           }
           disabled={isPreparingRecord || isCapturing || isTransitioning}
           onClick={() => setIsMicEnabled(!isMicEnabled)}
@@ -114,7 +114,7 @@ export const StandbyFloatingBar: React.FC<StandbyFloatingBarProps> = ({
       {/* Close Button */}
       <button
         type="button"
-        title="Tutup (Esc)"
+        title="Close (Esc)"
         onClick={onCloseOverlay}
         className="p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer"
       >

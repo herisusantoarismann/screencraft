@@ -28,7 +28,7 @@ export const RecordingControlWidget: React.FC<RecordingControlWidgetProps> = ({
           {isMicEnabled && (
             <span
               className="flex items-center gap-1 text-[10px] text-emerald-300 font-bold px-1.5 py-0.5 bg-emerald-950/90 border border-emerald-500/50 rounded-md animate-pulse"
-              title="Voiceover mic aktif"
+              title="Microphone voiceover active"
             >
               <Mic className="w-3 h-3" />
               <span>Mic</span>
@@ -40,12 +40,12 @@ export const RecordingControlWidget: React.FC<RecordingControlWidgetProps> = ({
 
         <button
           type="button"
-          title="Selesai merekam layar"
+          title="Stop screen recording"
           onClick={onStopRecording}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white transition-all shadow-md shadow-rose-600/30 cursor-pointer"
         >
           <Square className="w-3.5 h-3.5 fill-current" />
-          <span>Selesai</span>
+          <span>Stop</span>
         </button>
       </div>
     </div>

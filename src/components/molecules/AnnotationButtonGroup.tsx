@@ -86,7 +86,7 @@ export const AnnotationButtonGroup: React.FC<AnnotationButtonGroupProps> = ({
 
             {/* Arrow */}
             <IconButton
-                title="Panah (Arrow)"
+                title="Arrow"
                 active={activeTool === "arrow"}
                 activeColor="blue"
                 onClick={() => onSelectTool("arrow")}
@@ -95,7 +95,7 @@ export const AnnotationButtonGroup: React.FC<AnnotationButtonGroupProps> = ({
 
             {/* Rect */}
             <IconButton
-                title="Kotak (Rectangle)"
+                title="Rectangle"
                 active={activeTool === "rect"}
                 activeColor="blue"
                 onClick={() => onSelectTool("rect")}
@@ -104,7 +104,7 @@ export const AnnotationButtonGroup: React.FC<AnnotationButtonGroupProps> = ({
 
             {/* Pen */}
             <IconButton
-                title="Pena (Pen)"
+                title="Pen"
                 active={activeTool === "pen"}
                 activeColor="blue"
                 onClick={() => onSelectTool("pen")}
@@ -113,7 +113,7 @@ export const AnnotationButtonGroup: React.FC<AnnotationButtonGroupProps> = ({
 
             {/* Smart Redact (Blur & Pixelate) */}
             <IconButton
-                title="Smart Redact / Blur & Pixelate (Samarkan Data Sensitif)"
+                title="Smart Redact / Blur & Pixelate (Hide Sensitive Data)"
                 active={activeTool === "blur"}
                 activeColor="rose"
                 onClick={() => onSelectTool("blur")}
@@ -137,7 +137,7 @@ export const AnnotationButtonGroup: React.FC<AnnotationButtonGroupProps> = ({
             {/* QA Severity & Issue Tags Stamp */}
             <div className="relative" ref={stampMenuRef}>
                 <IconButton
-                    title={`QA Severity & Issue Tag Stamp: ${currentStampPreset.emoji} ${currentStampPreset.label} (Klik untuk pilih)`}
+                    title={`QA Severity & Issue Tag Stamp: ${currentStampPreset.emoji} ${currentStampPreset.label} (Click to select)`}
                     active={activeTool === "stamp"}
                     activeColor="rose"
                     onClick={() => {
@@ -228,14 +228,14 @@ export const AnnotationButtonGroup: React.FC<AnnotationButtonGroupProps> = ({
                         <div className="border-t border-neutral-800 pt-1.5 flex flex-col gap-1.5">
                             <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 px-2 py-0.5 flex items-center justify-between">
                                 <span>Custom Tag / Stamp</span>
-                                <span className="text-[9px] text-cyan-400 font-mono">Bebas Ketik</span>
+                                <span className="text-[9px] text-cyan-400 font-mono">Free Text</span>
                             </div>
                             <div className="flex items-center gap-1.5 px-1">
                                 <input
                                     type="text"
                                     value={customText}
                                     onChange={(e) => setCustomText(e.target.value)}
-                                    placeholder="Misal: [REGRESSION]"
+                                    placeholder="e.g. [REGRESSION]"
                                     className="w-full px-2 py-1 bg-neutral-950 border border-neutral-700 rounded-lg text-xs text-white focus:outline-hidden focus:border-cyan-500"
                                 />
                                 <button
@@ -254,7 +254,7 @@ export const AnnotationButtonGroup: React.FC<AnnotationButtonGroupProps> = ({
                                     }}
                                     className="px-2.5 py-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-xs font-semibold shrink-0 cursor-pointer"
                                 >
-                                    Pakai
+                                    Apply
                                 </button>
                             </div>
                         </div>

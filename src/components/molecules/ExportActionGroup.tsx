@@ -68,8 +68,8 @@ export const ExportActionGroup: React.FC<ExportActionGroupProps> = ({
                     disabled={isBusy}
                     title={
                         includeDiagnosticsStamp
-                            ? "Watermark Footer Specs Hardware: AKTIF (Klik untuk nonaktifkan)"
-                            : "Watermark Footer Specs Hardware: NONAKTIF (Klik untuk aktifkan)"
+                            ? "Hardware Specs Watermark: ON (Click to disable)"
+                            : "Hardware Specs Watermark: OFF (Click to enable)"
                     }
                     onClick={onToggleDiagnosticsStamp}
                     className={`relative p-1.5 rounded-lg transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
@@ -93,7 +93,7 @@ export const ExportActionGroup: React.FC<ExportActionGroupProps> = ({
                 <button
                     type="button"
                     disabled={isBusy}
-                    title="Lihat Detail Hardware Specs & Display DPI (QA)"
+                    title="View Hardware Specs & Display DPI Details (QA)"
                     onClick={onOpenDiagnosticsModal}
                     className="p-1.5 rounded-lg text-neutral-400 hover:text-purple-300 hover:bg-neutral-700/60 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -104,7 +104,7 @@ export const ExportActionGroup: React.FC<ExportActionGroupProps> = ({
             {/* 2. Primary Action: Copy to Clipboard */}
             <button
                 type="button"
-                title="Salin ke Clipboard (Ctrl+C)"
+                title="Copy to Clipboard (Ctrl+C)"
                 disabled={isBusy}
                 onClick={onCopy}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition-all shadow-md shadow-emerald-600/30 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
@@ -116,7 +116,7 @@ export const ExportActionGroup: React.FC<ExportActionGroupProps> = ({
                 ) : (
                     <Copy className="w-3.5 h-3.5" />
                 )}
-                <span>{copySuccess ? "Tersalin!" : "Copy"}</span>
+                <span>{copySuccess ? "Copied!" : "Copy"}</span>
             </button>
 
             {/* 3. Secondary Actions: Save PNG & Share Webhook */}
@@ -124,9 +124,9 @@ export const ExportActionGroup: React.FC<ExportActionGroupProps> = ({
                 <IconButton
                     title={
                         isDownloading
-                            ? "Sedang Mengunduh PNG..."
+                            ? "Downloading PNG..."
                             : downloadSuccess
-                            ? "Gambar PNG Tersimpan!"
+                            ? "PNG Saved!"
                             : "Download PNG"
                     }
                     variant={downloadSuccess ? "success" : "secondary"}
@@ -145,7 +145,7 @@ export const ExportActionGroup: React.FC<ExportActionGroupProps> = ({
                 />
 
                 <IconButton
-                    title="Kirim ke Discord / Slack Webhook"
+                    title="Send to Discord / Slack Webhook"
                     variant="secondary"
                     disabled={isBusy}
                     onClick={onOpenWebhookModal}
@@ -205,7 +205,7 @@ export const ExportActionGroup: React.FC<ExportActionGroupProps> = ({
             {/* 5. Clear Annotations */}
             {hasAnnotationsOrNodes && (
                 <IconButton
-                    title="Hapus Semua Anotasi & Flow"
+                    title="Clear All Annotations & Flow"
                     variant="ghost"
                     size="sm"
                     disabled={isBusy}
@@ -217,7 +217,7 @@ export const ExportActionGroup: React.FC<ExportActionGroupProps> = ({
 
             {/* 6. Cancel Screenshot */}
             <IconButton
-                title="Batal Screenshot (Kembali ke Floating Bar - Esc)"
+                title="Cancel Screenshot (Back to Floating Bar - Esc)"
                 variant="ghost"
                 disabled={isBusy}
                 onClick={onCancelCapture}
