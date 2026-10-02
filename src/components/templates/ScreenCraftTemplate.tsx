@@ -276,7 +276,7 @@ export const ScreenCraftTemplate: React.FC<ScreenCraftTemplateProps> = ({
       <Toast
         message={error}
         type="error"
-        actionLabel="Coba lagi"
+        actionLabel="Retry"
         onAction={onCaptureScreenRetry}
       />
 
@@ -318,7 +318,12 @@ export const ScreenCraftTemplate: React.FC<ScreenCraftTemplateProps> = ({
       {/* Download PNG Toast Feedback */}
       <Toast
         message={downloadToast || null}
-        type={downloadToast?.startsWith("Gagal") ? "error" : "success"}
+        type={
+          downloadToast?.toLowerCase().includes("fail") ||
+          downloadToast?.startsWith("Gagal")
+            ? "error"
+            : "success"
+        }
       />
 
       {/* OCR Processing Overlay */}

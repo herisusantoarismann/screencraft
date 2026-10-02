@@ -492,8 +492,8 @@ export const CapturePage: React.FC = () => {
                 const isLight = brightness > 128;
                 const textColor = isLight ? "#000000" : "#ffffff";
                 const contrastStatus = isLight
-                    ? "Kontras: Hitam"
-                    : "Kontras: Putih";
+                    ? "Contrast: Black"
+                    : "Contrast: White";
 
                 setEyedropperData({
                     x: pos.x,
@@ -619,14 +619,14 @@ export const CapturePage: React.FC = () => {
                         isOpen: true,
                         text:
                             text ||
-                            "(Tidak ada teks yang dapat dikenali pada area seleksi)",
+                            "(No recognizable text found in selection area)",
                         copied: Boolean(text),
                     });
                 } catch (err) {
                     console.error("[CapturePage] OCR failed:", err);
                     setOcrModal({
                         isOpen: true,
-                        text: `Gagal membaca teks: ${err instanceof Error ? err.message : String(err)}`,
+                        text: `Failed to extract text: ${err instanceof Error ? err.message : String(err)}`,
                         copied: false,
                     });
                 } finally {
@@ -789,7 +789,7 @@ export const CapturePage: React.FC = () => {
         setDownloadToast(null);
         try {
             const dataUrl = await getFinalExportDataUrl();
-            if (!dataUrl) throw new Error("Gagal mengambil data gambar screenshot.");
+            if (!dataUrl) throw new Error("Failed to get screenshot image data.");
 
             const now = new Date();
             const dateStr = now.toISOString().slice(0, 10);
@@ -810,8 +810,8 @@ export const CapturePage: React.FC = () => {
 
             if (res.success) {
                 setDownloadSuccess(true);
-                const displayLocation = res.fileName || "folder pilihan";
-                setDownloadToast(`Gambar berhasil disimpan: ${displayLocation}! 🎉`);
+                const displayLocation = res.fileName || "selected folder";
+                setDownloadToast(`Image saved successfully: ${displayLocation}! 🎉`);
                 setTimeout(() => {
                     setDownloadSuccess(false);
                     setDownloadToast(null);
@@ -821,7 +821,7 @@ export const CapturePage: React.FC = () => {
             }
         } catch (err) {
             console.error("[CapturePage] Download PNG failed:", err);
-            setDownloadToast("Gagal menyimpan gambar PNG.");
+            setDownloadToast("Failed to save PNG image.");
             setTimeout(() => setDownloadToast(null), 3500);
         } finally {
             setIsDownloading(false);
