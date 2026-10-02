@@ -226,8 +226,8 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
         }
 
         // Auto-detect Title
-        const appName = diagnostics?.active_window_app || "Aplikasi";
-        const defaultTitle = `${appName} - Kendala fungsional / tampilan`;
+        const appName = diagnostics?.active_window_app || "Application";
+        const defaultTitle = `${appName} - Functional / visual defect`;
         setTitle(defaultTitle);
 
         // Auto-detect Preconditions
@@ -235,7 +235,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
         const res = diagnostics?.display_resolution || "1920x1080";
         const scale = diagnostics?.display_scale_pct || 100;
         setPreconditions(
-            `Pengguna mengakses aplikasi pada lingkungan pengujian (${os}, resolusi ${res} @ ${scale}% DPI).`,
+            `User accessed the application in test environment (${os}, resolution ${res} @ ${scale}% DPI).`,
         );
 
         // Auto-detect Steps from Flow Nodes or Step Badges
@@ -255,22 +255,22 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                 const generated = sorted
                     .map(
                         (s) =>
-                            `${s.stepNumber}. Klik / interaksi pada area langkah ${s.stepNumber}`,
+                            `${s.stepNumber}. Click / interact on step area ${s.stepNumber}`,
                     )
                     .join("\n");
                 setSteps(generated);
             } else {
                 setSteps(
-                    "1. Buka aplikasi target\n2. Navigasi ke fitur / halaman terkait\n3. Lakukan interaksi / input data\n4. Amati defect / anomali yang terjadi",
+                    "1. Open target application\n2. Navigate to the relevant feature / page\n3. Perform interaction / input data\n4. Observe the defect / unexpected behavior",
                 );
             }
         }
 
         setExpectedResult(
-            "Fitur dan tata letak berjalan normal sesuai spesifikasi desain.",
+            "Features and layout work normally according to specifications.",
         );
         setActualResult(
-            "Terjadi anomali / defect seperti pada tangkapan layar terlampir.",
+            "Defect / unexpected behavior occurs as shown in the attached screenshot.",
         );
         setStackTrace("");
         setCopiedStatus(null);
@@ -298,7 +298,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
 
         let out = `h2. {color:#ef4444}*${effectiveSeverity}* - ${effectiveCategory} ${title}{color}\n\n`;
         out += `*Preconditions:*\n${preconditions}\n\n`;
-        out += `*Steps to Reproduce:*\n${jiraSteps || "# Lakukan langkah pengujian"}\n\n`;
+        out += `*Steps to Reproduce:*\n${jiraSteps || "# Perform test steps"}\n\n`;
         out += `*Expected Result:*\n${expectedResult}\n\n`;
         out += `*Actual Result:*\n${actualResult}\n\n`;
 
@@ -373,7 +373,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
         void navigator.clipboard.writeText(text);
         setTextCopiedSuccess(true);
         setCopiedStatus(
-            `Teks ${format === "jira" ? "Jira" : "GitHub"} tersalin! Silakan paste ke WA/Jira.`,
+            `${format === "jira" ? "Jira" : "GitHub"} text copied! Ready to paste.`,
         );
         setTimeout(() => {
             setTextCopiedSuccess(false);
@@ -392,11 +392,11 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
             }
             setImageCopiedSuccess(true);
             setCopiedStatus(
-                "Gambar screenshot berhasil disalin! Silakan paste ke WA/Jira.",
+                "Screenshot image copied successfully! Ready to paste.",
             );
         } catch (err) {
             console.error("Failed to copy image:", err);
-            setCopiedStatus("Gagal menyalin gambar screenshot.");
+            setCopiedStatus("Failed to copy screenshot image.");
         } finally {
             setIsCopyingImage(false);
             setTimeout(() => {
@@ -412,7 +412,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
         try {
             const zip = new JSZip();
 
-            // 1. Ambil screenshot beranotasi jika tersedia
+            // 1. Get annotated screenshot if available
             if (onGetImageDataUrlOrBlob) {
                 try {
                     const img = await onGetImageDataUrlOrBlob();
@@ -435,7 +435,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                 }
             }
 
-            // 2. Buat dokumentasi bersih yang mereferensikan ./screenshot.png
+            // 2. Create clean documentation referencing ./screenshot.png
             if (activeTab === "flowDoc") {
                 const flowDocContent = `${exportFlowToMarkdown(nodes)}${
                     attachSpecs && diagnostics
@@ -444,16 +444,16 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                 }\n\n### 🖼️ Screenshot Evidence\n![Annotated Screenshot](./screenshot.png)\n`;
                 zip.file("flow-documentation.md", flowDocContent);
             } else {
-                // Markdown format (GitHub / Linear) dengan link gambar lokal
+                // Markdown format (GitHub / Linear) with local image link
                 const markdownContent = `${buildGitHubMarkup()}\n\n### 🖼️ Screenshot Evidence\n![Annotated Screenshot](./screenshot.png)\n`;
                 zip.file("bug-report.md", markdownContent);
 
-                // Jira wiki format teks
+                // Jira wiki format text
                 const jiraContent = buildJiraMarkup();
                 zip.file("jira-ticket.txt", jiraContent);
             }
 
-            // 3. Generate berkas .zip dan simpan via native Save As dialog
+            // 3. Generate .zip archive and save via native Save As dialog
             const zipBlob = await zip.generateAsync({ type: "blob" });
             const cleanTitle = title.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 30);
             const dateStr = new Date().toISOString().slice(0, 10);
@@ -469,11 +469,11 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
             if (res.canceled) return;
 
             setCopiedStatus(
-                `Paket tiket (${res.fileName || defaultZipName}) berhasil disimpan! 🎉`,
+                `Ticket archive (${res.fileName || defaultZipName}) saved successfully! 🎉`,
             );
         } catch (err) {
             console.error("Failed to download zip file:", err);
-            setCopiedStatus("Gagal menyimpan berkas tiket .zip.");
+            setCopiedStatus("Failed to save .zip ticket archive.");
         } finally {
             setIsDownloading(false);
             setTimeout(() => setCopiedStatus(null), 4000);
@@ -531,7 +531,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                             type="button"
                             onClick={() => void handleExitFloater()}
                             className="p-1 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
-                            title="Perbesar / Buka Modal Penuh"
+                            title="Maximize / Open Full Modal"
                         >
                             <Maximize2 className="w-3.5 h-3.5" />
                         </button>
@@ -539,7 +539,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                             type="button"
                             onClick={() => void handleCloseFromFloater()}
                             className="p-1 text-neutral-400 hover:text-rose-400 rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
-                            title="Tutup & Selesai"
+                            title="Close"
                         >
                             <X className="w-3.5 h-3.5" />
                         </button>
@@ -567,12 +567,12 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                         {textCopiedSuccess ? (
                             <>
                                 <Check className="w-3.5 h-3.5 text-emerald-300" />
-                                <span>Tersalin!</span>
+                                <span>Copied!</span>
                             </>
                         ) : (
                             <>
                                 <Copy className="w-3.5 h-3.5" />
-                                <span>Copy Teks</span>
+                                <span>Copy Text</span>
                             </>
                         )}
                     </button>
@@ -586,17 +586,17 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                         {isCopyingImage ? (
                             <>
                                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                <span>Menyalin...</span>
+                                <span>Copying...</span>
                             </>
                         ) : imageCopiedSuccess ? (
                             <>
                                 <Check className="w-3.5 h-3.5 text-emerald-200" />
-                                <span>Tersalin!</span>
+                                <span>Copied!</span>
                             </>
                         ) : (
                             <>
                                 <ImageIcon className="w-3.5 h-3.5" />
-                                <span>Copy Gambar</span>
+                                <span>Copy Image</span>
                             </>
                         )}
                     </button>
@@ -605,7 +605,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                 {/* Desktop Access Tip */}
                 <div className="text-[10px] text-emerald-400 bg-emerald-950/40 border border-emerald-500/30 px-2 py-1 rounded-lg text-center font-medium">
                     {copiedStatus ||
-                        "💡 Layar desktop bebas diakses! Paste ke WA / Jira."}
+                        "💡 Desktop is unblocked! Ready to paste."}
                 </div>
             </div>
         );
@@ -660,7 +660,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                             type="button"
                             onClick={() => void handleEnterFloater()}
                             className="text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
-                            title="Minimize ke Pojok Layar (Agar desktop tidak terhalang)"
+                            title="Minimize to Corner (Keep desktop unblocked)"
                         >
                             <Minus className="w-4 h-4" />
                         </button>
@@ -670,7 +670,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                             type="button"
                             onClick={onClose}
                             className="text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
-                            title="Tutup"
+                            title="Close"
                         >
                             <X className="w-4 h-4" />
                         </button>
@@ -685,7 +685,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                             <div className="flex items-center justify-between border-b border-neutral-800 pb-2.5">
                                 <div className="text-xs font-semibold text-neutral-300 flex items-center gap-1.5">
                                     <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                                    <span>Target Format Penulisan:</span>
+                                    <span>Target Output Format:</span>
                                 </div>
                                 <div className="flex items-center gap-1 bg-neutral-950/80 p-0.5 rounded-xl border border-neutral-800">
                                     <button
@@ -759,7 +759,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                                                         ? "border-cyan-500/80 bg-cyan-950/80 text-cyan-200 shadow-xs"
                                                         : "border-neutral-800 bg-neutral-950/60 text-neutral-400 hover:border-neutral-700 hover:text-neutral-300"
                                                 }`}
-                                                title={`Pilih severity: ${sev}`}
+                                                title={`Select severity: ${sev}`}
                                             >
                                                 <span className="truncate max-w-[130px]">
                                                     {sev}
@@ -773,7 +773,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                                                         );
                                                     }}
                                                     className="p-0.5 rounded text-neutral-500 hover:text-red-400 hover:bg-neutral-800/80 transition-colors ml-0.5 cursor-pointer"
-                                                    title={`Hapus "${sev}" dari daftar custom`}
+                                                    title={`Delete "${sev}" from custom list`}
                                                 >
                                                     <X className="w-3 h-3" />
                                                 </button>
@@ -788,7 +788,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                                                     setIsAddingSeverity(true)
                                                 }
                                                 className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold border border-dashed border-neutral-700 bg-neutral-950/40 text-neutral-400 hover:text-cyan-300 hover:border-cyan-500/50 transition-all cursor-pointer"
-                                                title="Tambah severity custom baru"
+                                                title="Add custom severity"
                                             >
                                                 <Plus className="w-3 h-3" />
                                                 <span>Custom</span>
@@ -821,7 +821,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                                                         setNewSeverityInput("");
                                                     }
                                                 }}
-                                                placeholder="Severity baru (mis: P0 - Hotfix)..."
+                                                placeholder="New severity (e.g. P0 - Hotfix)..."
                                                 className="px-2.5 py-1 bg-neutral-950 border border-cyan-500/70 rounded-lg text-xs text-white focus:outline-hidden flex-1"
                                             />
                                             <button
@@ -834,7 +834,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                                                 }
                                                 className="px-2.5 py-1 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-40 text-white rounded-lg text-xs font-semibold cursor-pointer transition-colors"
                                             >
-                                                Simpan
+                                                Save
                                             </button>
                                             <button
                                                 type="button"
@@ -844,7 +844,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                                                 }}
                                                 className="px-2.5 py-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-lg text-xs cursor-pointer transition-colors"
                                             >
-                                                Batal
+                                                Cancel
                                             </button>
                                         </div>
                                     )}
@@ -854,7 +854,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                                 <div className="flex flex-col gap-1.5 p-2 rounded-xl bg-neutral-900/60 border border-neutral-800">
                                     <div className="flex items-center justify-between">
                                         <label className="text-[10px] uppercase font-bold text-neutral-400">
-                                            Kategori Issue
+                                            Issue Category
                                         </label>
                                         <span className="text-[10px] font-mono text-purple-400 truncate max-w-[150px]">
                                             {effectiveCategory}
@@ -865,50 +865,50 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                                     <div className="max-h-24 sm:max-h-28 overflow-y-auto pr-1 flex flex-wrap gap-1.5 scrollbar-thin scrollbar-thumb-neutral-700">
                                         {/* Presets */}
                                         {PRESET_CATEGORIES.map((cat) => (
-                                            <button
-                                                key={cat}
-                                                type="button"
-                                                onClick={() => setCategory(cat)}
-                                                className={`px-2 py-0.5 rounded-lg text-[11px] font-semibold font-mono border transition-all cursor-pointer ${
-                                                    category === cat
-                                                        ? "bg-purple-950/80 border-purple-500/80 text-purple-200"
-                                                        : "border-neutral-800 bg-neutral-950/60 text-neutral-400 hover:border-neutral-700 hover:text-neutral-200"
-                                                }`}
-                                            >
-                                                {cat}
-                                            </button>
-                                        ))}
+                                             <button
+                                                 key={cat}
+                                                 type="button"
+                                                 onClick={() => setCategory(cat)}
+                                                 className={`px-2 py-0.5 rounded-lg text-[11px] font-semibold font-mono border transition-all cursor-pointer ${
+                                                     category === cat
+                                                         ? "bg-purple-950/80 border-purple-500/80 text-purple-200"
+                                                         : "border-neutral-800 bg-neutral-950/60 text-neutral-400 hover:border-neutral-700 hover:text-neutral-200"
+                                                 }`}
+                                             >
+                                                 {cat}
+                                             </button>
+                                         ))}
 
                                         {/* Saved Custom Categories */}
                                         {customCategories.map((cat) => (
-                                            <div
-                                                key={cat}
-                                                onClick={() => setCategory(cat)}
-                                                className={`group flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-lg text-[11px] font-semibold font-mono border transition-all cursor-pointer ${
-                                                    category === cat
-                                                        ? "bg-purple-950/80 border-purple-500/80 text-purple-200 shadow-xs"
-                                                        : "border-neutral-800 bg-neutral-950/60 text-neutral-400 hover:border-neutral-700 hover:text-neutral-300"
-                                                }`}
-                                                title={`Pilih kategori: ${cat}`}
-                                            >
-                                                <span className="truncate max-w-[120px]">
-                                                    {cat}
-                                                </span>
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleDeleteCustomCategory(
-                                                            cat,
-                                                        );
-                                                    }}
-                                                    className="p-0.5 rounded text-neutral-500 hover:text-red-400 hover:bg-neutral-800/80 transition-colors ml-0.5 cursor-pointer"
-                                                    title={`Hapus "${cat}" dari daftar custom`}
-                                                >
-                                                    <X className="w-2.5 h-2.5" />
-                                                </button>
-                                            </div>
-                                        ))}
+                                             <div
+                                                 key={cat}
+                                                 onClick={() => setCategory(cat)}
+                                                 className={`group flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-lg text-[11px] font-semibold font-mono border transition-all cursor-pointer ${
+                                                     category === cat
+                                                         ? "bg-purple-950/80 border-purple-500/80 text-purple-200 shadow-xs"
+                                                         : "border-neutral-800 bg-neutral-950/60 text-neutral-400 hover:border-neutral-700 hover:text-neutral-300"
+                                                 }`}
+                                                 title={`Select category: ${cat}`}
+                                             >
+                                                 <span className="truncate max-w-[120px]">
+                                                     {cat}
+                                                 </span>
+                                                 <button
+                                                     type="button"
+                                                     onClick={(e) => {
+                                                         e.stopPropagation();
+                                                         handleDeleteCustomCategory(
+                                                             cat,
+                                                         );
+                                                     }}
+                                                     className="p-0.5 rounded text-neutral-500 hover:text-red-400 hover:bg-neutral-800/80 transition-colors ml-0.5 cursor-pointer"
+                                                     title={`Delete "${cat}" from custom list`}
+                                                 >
+                                                     <X className="w-2.5 h-2.5" />
+                                                 </button>
+                                             </div>
+                                         ))}
 
                                         {/* Trigger Add Custom */}
                                         {!isAddingCategory && (
@@ -918,7 +918,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                                                     setIsAddingCategory(true)
                                                 }
                                                 className="flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-semibold border border-dashed border-neutral-700 bg-neutral-950/40 text-neutral-400 hover:text-purple-300 hover:border-purple-500/50 transition-all cursor-pointer"
-                                                title="Tambah kategori custom baru"
+                                                title="Add custom category"
                                             >
                                                 <Plus className="w-3 h-3" />
                                                 <span>Custom</span>
@@ -951,7 +951,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                                                         setNewCategoryInput("");
                                                     }
                                                 }}
-                                                placeholder="Kategori baru (mis: PAYMENT)..."
+                                                placeholder="New category (e.g. PAYMENT)..."
                                                 className="px-2 py-0.5 bg-neutral-950 border border-purple-500/70 rounded-lg text-xs text-white focus:outline-hidden flex-1"
                                             />
                                             <button
@@ -964,7 +964,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                                                 }
                                                 className="px-2.5 py-0.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 text-white rounded-lg text-xs font-semibold cursor-pointer transition-colors"
                                             >
-                                                Simpan
+                                                Save
                                             </button>
                                             <button
                                                 type="button"
@@ -972,9 +972,9 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                                                     setIsAddingCategory(false);
                                                     setNewCategoryInput("");
                                                 }}
-                                                className="px-2 py-0.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-lg text-xs cursor-pointer transition-colors"
+                                                className="px-2.5 py-0.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-lg text-xs cursor-pointer transition-colors"
                                             >
-                                                Batal
+                                                Cancel
                                             </button>
                                         </div>
                                     )}
@@ -984,13 +984,13 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                             {/* 3. Title / Summary */}
                             <div className="flex flex-col gap-1">
                                 <label className="text-[10px] uppercase font-bold text-neutral-400">
-                                    Judul / Summary Tiket
+                                    Ticket Title / Summary
                                 </label>
                                 <input
                                     type="text"
                                     value={title}
                                     onChange={(e) => setTitle(e.target.value)}
-                                    placeholder="Contoh: Tombol checkout freeze saat network lambat..."
+                                    placeholder="e.g. Checkout button freezes on slow network..."
                                     className="w-full px-3 py-1.5 bg-neutral-950/90 border border-neutral-700/80 rounded-xl text-xs text-white focus:outline-hidden focus:border-purple-500"
                                 />
                             </div>
@@ -999,7 +999,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div className="flex flex-col gap-1">
                                     <label className="text-[10px] uppercase font-bold text-neutral-400">
-                                        Preconditions (Kondisi Awal)
+                                        Preconditions
                                     </label>
                                     <textarea
                                         rows={4}
@@ -1017,8 +1017,8 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                                         </label>
                                         <span className="text-[9px] text-purple-400">
                                             {nodes.length > 0
-                                                ? "Dari Flow Builder"
-                                                : "Otomatis Step Badge"}
+                                                ? "From Flow Builder"
+                                                : "Auto Step Badge"}
                                         </span>
                                     </div>
                                     <textarea
@@ -1036,7 +1036,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div className="flex flex-col gap-1">
                                     <label className="text-[10px] uppercase font-bold text-emerald-400">
-                                        Expected Result (Hasil yang Diharapkan)
+                                        Expected Result
                                     </label>
                                     <input
                                         type="text"
@@ -1049,7 +1049,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                                 </div>
                                 <div className="flex flex-col gap-1">
                                     <label className="text-[10px] uppercase font-bold text-rose-400">
-                                        Actual Result (Hasil Aktual / Defect)
+                                        Actual Result
                                     </label>
                                     <input
                                         type="text"
@@ -1073,7 +1073,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                                         </span>
                                     </label>
                                     <span className="text-[9px] text-neutral-500">
-                                        Opsional
+                                        Optional
                                     </span>
                                 </div>
                                 <textarea
@@ -1082,7 +1082,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                                     onChange={(e) =>
                                         setStackTrace(e.target.value)
                                     }
-                                    placeholder="Paste error stack trace console inspect element atau payload error API di sini..."
+                                    placeholder="Paste console error stack trace or API error payload here..."
                                     className="w-full p-2.5 bg-neutral-950/90 border border-neutral-700/80 rounded-xl text-xs font-mono text-rose-300 placeholder-neutral-600 focus:outline-hidden focus:border-rose-500/80 resize-none"
                                 />
                             </div>
@@ -1101,8 +1101,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                                     <div className="flex items-center gap-1.5 text-xs text-neutral-300">
                                         <ShieldCheck className="w-3.5 h-3.5 text-purple-400 shrink-0" />
                                         <span>
-                                            Sertakan Spesifikasi Hardware &
-                                            Environment ({diagnostics.os_name},{" "}
+                                            Attach Hardware & Environment Diagnostics ({diagnostics.os_name},{" "}
                                             {diagnostics.display_resolution} @{" "}
                                             {diagnostics.display_scale_pct}%)
                                         </span>
@@ -1114,11 +1113,11 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                             <div className="flex flex-col gap-1">
                                 <div className="flex items-center justify-between text-[10px] text-neutral-400 uppercase font-bold">
                                     <span>
-                                        Pratinjau Tiket Terkompilasi (
+                                        Compiled Ticket Preview (
                                         {outputFormat.toUpperCase()})
                                     </span>
                                     <span className="text-purple-400 font-mono">
-                                        Siap Paste
+                                        Ready to Paste
                                     </span>
                                 </div>
                                 <textarea
@@ -1153,7 +1152,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                                 onClick={() => void handleEnterFloater()}
                                 className="px-2.5 py-1 bg-emerald-800/80 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-semibold transition-colors cursor-pointer shrink-0"
                             >
-                                Minimize ke Pojok
+                                Minimize to Corner
                             </button>
                         </div>
                     )}
@@ -1171,7 +1170,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                             {isDownloading ? (
                                 <>
                                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                    <span>Membuat .zip...</span>
+                                    <span>Building .zip...</span>
                                 </>
                             ) : (
                                 <>
@@ -1183,7 +1182,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                     </div>
 
                     <div className="flex items-center gap-2">
-                        {/* Salin Teks (mengikuti pilihan format Jira / GitHub dari switch di atas) */}
+                        {/* Copy Text */}
                         <button
                             type="button"
                             disabled={isCopyingImage || isDownloading}
@@ -1197,17 +1196,17 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                             {textCopiedSuccess ? (
                                 <>
                                     <Check className="w-3.5 h-3.5 text-white" />
-                                    <span>Tersalin!</span>
+                                    <span>Copied!</span>
                                 </>
                             ) : (
                                 <>
                                     <Copy className="w-3.5 h-3.5" />
-                                    <span>Salin Teks</span>
+                                    <span>Copy Text</span>
                                 </>
                             )}
                         </button>
 
-                        {/* Salin Gambar Screenshot */}
+                        {/* Copy Screenshot Image */}
                         <button
                             type="button"
                             disabled={isCopyingImage || isDownloading}
@@ -1217,17 +1216,17 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                             {isCopyingImage ? (
                                 <>
                                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                    <span>Menyalin Gambar...</span>
+                                    <span>Copying Image...</span>
                                 </>
                             ) : imageCopiedSuccess ? (
                                 <>
                                     <Check className="w-3.5 h-3.5 text-purple-200" />
-                                    <span>Gambar Tersalin!</span>
+                                    <span>Image Copied!</span>
                                 </>
                             ) : (
                                 <>
                                     <ImageIcon className="w-3.5 h-3.5" />
-                                    <span>Salin Gambar</span>
+                                    <span>Copy Image</span>
                                 </>
                             )}
                         </button>
