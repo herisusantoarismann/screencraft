@@ -275,11 +275,11 @@ export const VideoTrimModal: React.FC = () => {
 
       if (res.canceled) return;
 
-      setFeedbackToast(`GIF berhasil disimpan: ${res.fileName || fileName}! 🎉`);
+      setFeedbackToast(`GIF saved successfully: ${res.fileName || fileName}! 🎉`);
       setTimeout(() => setFeedbackToast(null), 4000);
     } catch (err) {
       console.error("[VideoTrimModal] GIF conversion failed:", err);
-      setFeedbackToast("Gagal mengonversi GIF.");
+      setFeedbackToast("Failed to convert GIF.");
       setTimeout(() => setFeedbackToast(null), 3000);
     } finally {
       setIsConverting(false);
@@ -298,7 +298,7 @@ export const VideoTrimModal: React.FC = () => {
 
     if (res.canceled) return;
 
-    setFeedbackToast(`WebM berhasil disimpan: ${res.fileName || fileName}! 🎉`);
+    setFeedbackToast(`WebM saved successfully: ${res.fileName || fileName}! 🎉`);
     setTimeout(() => setFeedbackToast(null), 4000);
   }, [recordingBlob]);
 
@@ -328,12 +328,12 @@ export const VideoTrimModal: React.FC = () => {
 
         const platformName = platform === "slack" ? "Slack (< 5MB)" : "Jira (< 10MB)";
         setFeedbackToast(
-          `Video ${platformName} berhasil disimpan: ${res.fileName || result.fileName} (${result.sizeMB} MB)! 🎉`
+          `Video ${platformName} saved successfully: ${res.fileName || result.fileName} (${result.sizeMB} MB)! 🎉`
         );
         setTimeout(() => setFeedbackToast(null), 5000);
       } catch (err) {
         console.error(`[VideoTrimModal] ${platform} compression failed:`, err);
-        setFeedbackToast(`Gagal mengompresi video untuk ${platform}.`);
+        setFeedbackToast(`Failed to compress video for ${platform}.`);
         setTimeout(() => setFeedbackToast(null), 4000);
       } finally {
         setIsConverting(false);
@@ -358,14 +358,14 @@ export const VideoTrimModal: React.FC = () => {
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-neutral-800 bg-neutral-950/60">
           <div className="flex items-center gap-2 text-rose-400 font-semibold text-sm">
             <Film className="w-4 h-4" />
-            <span>Hasil Rekaman Layar</span>
+            <span>Screen Recording Preview</span>
             <span className="text-[11px] font-mono px-2 py-0.5 bg-rose-950/80 border border-rose-500/40 rounded-full text-rose-200">
-              Durasi: {validDuration.toFixed(1)}s
+              Duration: {validDuration.toFixed(1)}s
             </span>
             {isMicEnabled && (
               <span className="flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 bg-emerald-950/80 border border-emerald-500/40 rounded-full text-emerald-300">
                 <Mic className="w-3 h-3 text-emerald-400" />
-                Voiceover Aktif
+                Voiceover Active
               </span>
             )}
           </div>
@@ -377,7 +377,7 @@ export const VideoTrimModal: React.FC = () => {
               void invoke("enter_floating_bar_mode");
             }}
             className="text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-neutral-800 transition-colors"
-            title="Tutup (Close)"
+            title="Close"
           >
             <X className="w-4 h-4" />
           </button>
@@ -414,7 +414,7 @@ export const VideoTrimModal: React.FC = () => {
                 ? "opacity-0 group-hover:opacity-100"
                 : "opacity-95 hover:scale-105 shadow-rose-950/40"
             }`}
-            title={isPlaying ? "Jeda (Pause)" : "Putar (Play)"}
+            title={isPlaying ? "Pause" : "Play"}
           >
             {isPlaying ? (
               <Pause className="w-6 h-6" />
@@ -431,7 +431,7 @@ export const VideoTrimModal: React.FC = () => {
               setIsMuted((prev) => !prev);
             }}
             className="absolute bottom-3 right-3 p-2 rounded-xl bg-neutral-900/80 hover:bg-neutral-800 text-neutral-200 hover:text-white border border-white/10 shadow-lg transition-all"
-            title={isMuted ? "Bunyikan Audio (Unmute)" : "Bisukan Audio (Mute)"}
+            title={isMuted ? "Unmute Audio" : "Mute Audio"}
           >
             {isMuted ? (
               <VolumeX className="w-4 h-4 text-rose-400" />
@@ -451,7 +451,7 @@ export const VideoTrimModal: React.FC = () => {
                   type="button"
                   onClick={togglePlay}
                   className="p-1 rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-200 hover:text-white transition-colors flex items-center justify-center"
-                  title={isPlaying ? "Jeda (Pause)" : "Putar (Play)"}
+                  title={isPlaying ? "Pause" : "Play"}
                 >
                   {isPlaying ? (
                     <Pause className="w-3.5 h-3.5" />
@@ -465,7 +465,7 @@ export const VideoTrimModal: React.FC = () => {
                 </span>
               </div>
               <span className="text-rose-300 font-medium">
-                Area GIF: {trimDuration.toFixed(1)}s
+                GIF Range: {trimDuration.toFixed(1)}s
               </span>
             </div>
 
@@ -474,7 +474,7 @@ export const VideoTrimModal: React.FC = () => {
               ref={progressBarRef}
               onMouseDown={handleMouseDownScrub}
               className="relative w-full h-6 flex items-center cursor-pointer group select-none py-1"
-              title="Klik atau geser untuk memutar video dari posisi ini"
+              title="Click or drag to scrub video"
             >
               {/* Base Track (Right/Unplayed side: Dark Neutral) */}
               <div className="relative w-full h-2 group-hover:h-2.5 bg-neutral-800 rounded-full overflow-hidden transition-all">
@@ -511,7 +511,7 @@ export const VideoTrimModal: React.FC = () => {
             {/* Start Trim Control */}
             <div className="flex flex-col gap-1.5 p-2.5 bg-neutral-900/80 border border-neutral-800 rounded-xl">
               <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
-                Mulai (Start)
+                Start Time
               </span>
               <div className="flex items-center justify-between gap-1.5">
                 <span className="text-base font-mono font-bold text-white">
@@ -538,7 +538,7 @@ export const VideoTrimModal: React.FC = () => {
                     type="button"
                     onClick={handleSetStartToCurrent}
                     className="px-2 py-0.5 bg-rose-950/80 border border-rose-500/40 hover:bg-rose-900 text-[10px] rounded text-rose-200"
-                    title="Gunakan posisi kursor video saat ini"
+                    title="Use current video playhead position"
                   >
                     Set
                   </button>
@@ -550,13 +550,13 @@ export const VideoTrimModal: React.FC = () => {
             <div className="flex flex-col gap-1.5 p-2.5 bg-neutral-900/80 border border-neutral-800 rounded-xl">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
-                  Selesai (End)
+                  End Time
                 </span>
                 <button
                   type="button"
                   onClick={resetTrim}
                   className="text-[10px] text-neutral-400 hover:text-white flex items-center gap-0.5"
-                  title="Reset batas trim ke durasi penuh"
+                  title="Reset trim range to full duration"
                 >
                   <RotateCcw className="w-2.5 h-2.5" />
                   <span>Reset</span>
@@ -587,7 +587,7 @@ export const VideoTrimModal: React.FC = () => {
                     type="button"
                     onClick={handleSetEndToCurrent}
                     className="px-2 py-0.5 bg-rose-950/80 border border-rose-500/40 hover:bg-rose-900 text-[10px] rounded text-rose-200"
-                    title="Gunakan posisi kursor video saat ini"
+                    title="Use current video playhead position"
                   >
                     Set
                   </button>
@@ -603,10 +603,10 @@ export const VideoTrimModal: React.FC = () => {
                 <span className="flex items-center gap-1.5">
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-400" />
                   {compressingPlatform === "slack"
-                    ? "Mengompresi video Fit to Slack (< 5MB)..."
+                    ? "Compressing video to fit Slack (< 5MB)..."
                     : compressingPlatform === "jira"
-                    ? "Mengompresi video Fit to Jira (< 10MB)..."
-                    : "Mengonversi GIF via FFmpeg WebAssembly..."}
+                    ? "Compressing video to fit Jira (< 10MB)..."
+                    : "Converting GIF via FFmpeg WebAssembly..."}
                 </span>
                 <span>{conversionProgress}%</span>
               </div>
@@ -632,7 +632,7 @@ export const VideoTrimModal: React.FC = () => {
             disabled={isConverting}
             className="px-3.5 py-1.5 rounded-xl text-xs font-medium text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors disabled:opacity-50"
           >
-            Tutup
+            Close
           </button>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -642,7 +642,7 @@ export const VideoTrimModal: React.FC = () => {
               onClick={() => void handleExportWebm()}
               disabled={isConverting}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-neutral-700 transition-all disabled:opacity-50"
-              title="Simpan rekaman WebM ke folder Downloads"
+              title="Save WebM recording"
             >
               <Download className="w-3.5 h-3.5 text-blue-400" />
               <span>WebM</span>
@@ -654,7 +654,7 @@ export const VideoTrimModal: React.FC = () => {
               onClick={() => void handleCompressForPlatform("slack")}
               disabled={isConverting}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-950/80 hover:bg-emerald-900 text-emerald-200 border border-emerald-500/40 transition-all disabled:opacity-50"
-              title="Kompres video otomatis agar ukuran < 5MB untuk Slack"
+              title="Auto-compress video under 5MB for Slack"
             >
               {compressingPlatform === "slack" ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
@@ -670,7 +670,7 @@ export const VideoTrimModal: React.FC = () => {
               onClick={() => void handleCompressForPlatform("jira")}
               disabled={isConverting}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-950/80 hover:bg-blue-900 text-blue-200 border border-blue-500/40 transition-all disabled:opacity-50"
-              title="Kompres video otomatis agar ukuran < 10MB untuk Jira"
+              title="Auto-compress video under 10MB for Jira"
             >
               {compressingPlatform === "jira" ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400" />
@@ -686,7 +686,7 @@ export const VideoTrimModal: React.FC = () => {
               onClick={() => void handleExportGif()}
               disabled={isConverting}
               className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white transition-all shadow-md shadow-rose-600/30 disabled:opacity-50"
-              title="Konversi dan simpan animasi GIF ke folder Downloads"
+              title="Convert and save GIF animation"
             >
               {isConverting && !compressingPlatform ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
