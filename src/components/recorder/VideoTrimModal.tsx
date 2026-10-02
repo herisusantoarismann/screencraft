@@ -20,38 +20,25 @@ import {
 import { useRecordStore } from "../../stores/recordStore";
 import { convertWebmToGif } from "../../services/gifConverter";
 import { compressVideoForPlatform } from "../../services/videoCompressor";
+import { saveFileWithDialog } from "../../services/fileSaveService";
 
-const blobToBase64 = (blob: Blob): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
+const saveBlobFile = async (
+  blob: Blob,
+  defaultName: string,
+  filterName: string = "All Files",
+  filterExtension: string = "*"
+): Promise<{ savedPath: string | null; fileName: string | null; canceled?: boolean }> => {
+  const res = await saveFileWithDialog({
+    defaultName,
+    data: blob,
+    filterName,
+    filterExtension,
   });
-};
-
-const saveBlobFile = async (blob: Blob, defaultName: string): Promise<string | null> => {
-  try {
-    const base64Data = await blobToBase64(blob);
-    const savedPath = await invoke<string>("save_file_to_downloads", {
-      fileName: defaultName,
-      base64Data,
-    });
-    return savedPath;
-  } catch (err) {
-    console.warn("[saveBlobFile] Rust save failed, falling back to browser download:", err);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = defaultName;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => {
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }, 15000);
-    return null;
-  }
+  return {
+    savedPath: res.savedPath,
+    fileName: res.fileName,
+    canceled: res.canceled,
+  };
 };
 
 export const VideoTrimModal: React.FC = () => {
@@ -280,14 +267,15 @@ export const VideoTrimModal: React.FC = () => {
         (progress) => setConversionProgress(progress)
       );
 
-      const fileName = `screencraft-${Date.now()}.gif`;
-      const savedPath = await saveBlobFile(gifBlob, fileName);
+      const now = new Date();
+      const dateStr = now.toISOString().slice(0, 10);
+      const timeStr = `${String(now.getHours()).padStart(2, "0")}-${String(now.getMinutes()).padStart(2, "0")}-${String(now.getSeconds()).padStart(2, "0")}`;
+      const fileName = `screencraft-record-${dateStr}_${timeStr}.gif`;
+      const res = await saveBlobFile(gifBlob, fileName, "GIF Animation", "gif");
 
-      setFeedbackToast(
-        savedPath
-          ? `GIF tersimpan di Downloads: ${fileName}`
-          : `GIF berhasil diekspor (${fileName})`
-      );
+      if (res.canceled) return;
+
+      setFeedbackToast(`GIF berhasil disimpan: ${res.fileName || fileName}! 🎉`);
       setTimeout(() => setFeedbackToast(null), 4000);
     } catch (err) {
       console.error("[VideoTrimModal] GIF conversion failed:", err);
@@ -298,22 +286,23 @@ export const VideoTrimModal: React.FC = () => {
     }
   }, [recordingBlob, startTime, endTime, setIsConverting, setConversionProgress]);
 
-  // Export as WebM directly (instant download)
+  // Export as WebM directly via native Save As dialog
   const handleExportWebm = useCallback(async () => {
     if (!recordingBlob) return;
 
-    const fileName = `screencraft-record-${Date.now()}.webm`;
-    const savedPath = await saveBlobFile(recordingBlob, fileName);
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0, 10);
+    const timeStr = `${String(now.getHours()).padStart(2, "0")}-${String(now.getMinutes()).padStart(2, "0")}-${String(now.getSeconds()).padStart(2, "0")}`;
+    const fileName = `screencraft-record-${dateStr}_${timeStr}.webm`;
+    const res = await saveBlobFile(recordingBlob, fileName, "WebM Video", "webm");
 
-    setFeedbackToast(
-      savedPath
-        ? `WebM tersimpan di Downloads: ${fileName}`
-        : `WebM berhasil diekspor!`
-    );
+    if (res.canceled) return;
+
+    setFeedbackToast(`WebM berhasil disimpan: ${res.fileName || fileName}! 🎉`);
     setTimeout(() => setFeedbackToast(null), 4000);
   }, [recordingBlob]);
 
-  // Compress for platform (Slack < 5MB or Jira < 10MB)
+  // Compress for platform (Slack < 5MB or Jira < 10MB) via native Save As dialog
   const handleCompressForPlatform = useCallback(
     async (platform: "slack" | "jira") => {
       if (!recordingBlob) return;
@@ -331,13 +320,15 @@ export const VideoTrimModal: React.FC = () => {
           (progress) => setConversionProgress(progress)
         );
 
-        const savedPath = await saveBlobFile(result.blob, result.fileName);
-        const platformName = platform === "slack" ? "Slack (< 5MB)" : "Jira (< 10MB)";
+        const ext = result.fileName.endsWith(".mp4") ? "mp4" : "webm";
+        const filterName = ext === "mp4" ? "MP4 Video" : "WebM Video";
+        const res = await saveBlobFile(result.blob, result.fileName, filterName, ext);
 
+        if (res.canceled) return;
+
+        const platformName = platform === "slack" ? "Slack (< 5MB)" : "Jira (< 10MB)";
         setFeedbackToast(
-          savedPath
-            ? `Video ${platformName} tersimpan di Downloads (${result.sizeMB} MB)!`
-            : `Video ${platformName} berhasil diunduh (${result.sizeMB} MB)!`
+          `Video ${platformName} berhasil disimpan: ${res.fileName || result.fileName} (${result.sizeMB} MB)! 🎉`
         );
         setTimeout(() => setFeedbackToast(null), 5000);
       } catch (err) {

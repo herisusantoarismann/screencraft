@@ -23,6 +23,7 @@ import {
     getSystemDiagnostics,
     attachDiagnosticsFooter,
 } from "../services/diagnosticsService";
+import { saveFileWithDialog } from "../services/fileSaveService";
 import { ScreenCraftTemplate } from "../components/templates";
 
 export const CapturePage: React.FC = () => {
@@ -782,7 +783,7 @@ export const CapturePage: React.FC = () => {
         }
     }, [getFinalExportDataUrl]);
 
-    // Export: Download PNG locally
+    // Export: Download PNG locally via native Save As dialog
     const handleDownloadPNG = useCallback(async () => {
         setIsDownloading(true);
         setDownloadToast(null);
@@ -790,22 +791,37 @@ export const CapturePage: React.FC = () => {
             const dataUrl = await getFinalExportDataUrl();
             if (!dataUrl) throw new Error("Gagal mengambil data gambar screenshot.");
 
-            const a = document.createElement("a");
-            a.href = dataUrl;
-            a.download = `screencraft-${Date.now()}.png`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            const now = new Date();
+            const dateStr = now.toISOString().slice(0, 10);
+            const timeStr = `${String(now.getHours()).padStart(2, "0")}-${String(now.getMinutes()).padStart(2, "0")}-${String(now.getSeconds()).padStart(2, "0")}`;
+            const targetName = `screencraft-${dateStr}_${timeStr}.png`;
 
-            setDownloadSuccess(true);
-            setDownloadToast("Gambar PNG berhasil diunduh ke folder Downloads! 🎉");
-            setTimeout(() => {
-                setDownloadSuccess(false);
-                setDownloadToast(null);
-            }, 3500);
+            const res = await saveFileWithDialog({
+                defaultName: targetName,
+                data: dataUrl,
+                filterName: "PNG Image",
+                filterExtension: "png",
+            });
+
+            if (res.canceled) {
+                // User cancelled the dialog, cleanly exit without error toast
+                return;
+            }
+
+            if (res.success) {
+                setDownloadSuccess(true);
+                const displayLocation = res.fileName || "folder pilihan";
+                setDownloadToast(`Gambar berhasil disimpan: ${displayLocation}! 🎉`);
+                setTimeout(() => {
+                    setDownloadSuccess(false);
+                    setDownloadToast(null);
+                }, 3500);
+            } else if (res.error) {
+                throw new Error(res.error);
+            }
         } catch (err) {
             console.error("[CapturePage] Download PNG failed:", err);
-            setDownloadToast("Gagal mengunduh gambar PNG.");
+            setDownloadToast("Gagal menyimpan gambar PNG.");
             setTimeout(() => setDownloadToast(null), 3500);
         } finally {
             setIsDownloading(false);

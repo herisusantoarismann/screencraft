@@ -17,6 +17,8 @@ import {
     Move,
 } from "lucide-react";
 
+import { saveFileWithDialog } from "../../services/fileSaveService";
+
 export type ComparisonMode = "slider" | "overlay" | "difference" | "sideBySide";
 
 export interface VisualComparisonModalProps {
@@ -422,7 +424,7 @@ export const VisualComparisonModal: React.FC<VisualComparisonModalProps> = ({
         }
     };
 
-    // Download snapshot as PNG
+    // Download snapshot as PNG via native Save As dialog
     const handleDownloadDiffImage = async () => {
         setIsDownloading(true);
         try {
@@ -430,17 +432,24 @@ export const VisualComparisonModal: React.FC<VisualComparisonModalProps> = ({
             if (!canvas) throw new Error("Gagal merender canvas komparasi.");
 
             const dataUrl = canvas.toDataURL("image/png");
-            const a = document.createElement("a");
-            a.href = dataUrl;
-            a.download = `slicing-diff-${Date.now()}.png`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            const now = new Date();
+            const dateStr = now.toISOString().slice(0, 10);
+            const timeStr = `${String(now.getHours()).padStart(2, "0")}-${String(now.getMinutes()).padStart(2, "0")}-${String(now.getSeconds()).padStart(2, "0")}`;
+            const targetName = `slicing-diff-${dateStr}_${timeStr}.png`;
 
-            setStatusMessage("Gambar komparasi berhasil diunduh! 🎉");
+            const res = await saveFileWithDialog({
+                defaultName: targetName,
+                data: dataUrl,
+                filterName: "PNG Image",
+                filterExtension: "png",
+            });
+
+            if (res.canceled) return;
+
+            setStatusMessage(`Gambar komparasi (${res.fileName || targetName}) berhasil disimpan! 🎉`);
         } catch (err) {
             console.error("Failed to download diff image:", err);
-            setStatusMessage("Gagal mengunduh gambar komparasi.");
+            setStatusMessage("Gagal menyimpan gambar komparasi.");
         } finally {
             setIsDownloading(false);
             setTimeout(() => setStatusMessage(null), 3000);

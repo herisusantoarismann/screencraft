@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import type { FlowNode } from "../../stores/flowStore";
 import { exportFlowToMarkdown } from "../../stores/flowStore";
+import { saveFileWithDialog } from "../../services/fileSaveService";
 import type { SystemDiagnostics } from "../../types/diagnostics";
 import type {
     Annotation,
@@ -452,23 +453,27 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                 zip.file("jira-ticket.txt", jiraContent);
             }
 
-            // 3. Generate berkas .zip dan trigger download
+            // 3. Generate berkas .zip dan simpan via native Save As dialog
             const zipBlob = await zip.generateAsync({ type: "blob" });
-            const url = URL.createObjectURL(zipBlob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `bug-report-${Date.now()}.zip`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            const cleanTitle = title.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 30);
+            const dateStr = new Date().toISOString().slice(0, 10);
+            const defaultZipName = cleanTitle ? `${category || "BUG"}_${cleanTitle}.zip` : `screencraft-ticket-${dateStr}.zip`;
+
+            const res = await saveFileWithDialog({
+                defaultName: defaultZipName,
+                data: zipBlob,
+                filterName: "ZIP Archive",
+                filterExtension: "zip",
+            });
+
+            if (res.canceled) return;
 
             setCopiedStatus(
-                "Paket tiket bug (.zip) berhasil diunduh ke folder Downloads! 🎉",
+                `Paket tiket (${res.fileName || defaultZipName}) berhasil disimpan! 🎉`,
             );
         } catch (err) {
             console.error("Failed to download zip file:", err);
-            setCopiedStatus("Gagal mengunduh berkas tiket .zip.");
+            setCopiedStatus("Gagal menyimpan berkas tiket .zip.");
         } finally {
             setIsDownloading(false);
             setTimeout(() => setCopiedStatus(null), 4000);
