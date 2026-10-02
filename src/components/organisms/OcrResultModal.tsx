@@ -22,13 +22,13 @@ export const OcrResultModal: React.FC<OcrResultModalProps> = ({
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-neutral-800 bg-neutral-950/50">
           <div className="flex items-center gap-2 text-indigo-400 font-semibold text-sm">
             <ScanText className="w-4 h-4" />
-            <span>Hasil Ekstraksi OCR</span>
+            <span>OCR Text Extraction Result</span>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
-            title="Tutup"
+            title="Close"
           >
             <X className="w-4 h-4" />
           </button>
@@ -45,7 +45,7 @@ export const OcrResultModal: React.FC<OcrResultModalProps> = ({
           {modalState.copied && (
             <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium">
               <Check className="w-3.5 h-3.5" />
-              <span>Teks otomatis disalin ke clipboard!</span>
+              <span>Text automatically copied to clipboard!</span>
             </div>
           )}
         </div>
@@ -58,14 +58,14 @@ export const OcrResultModal: React.FC<OcrResultModalProps> = ({
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-md shadow-indigo-600/30 cursor-pointer"
           >
             <Copy className="w-3.5 h-3.5" />
-            <span>Salin Ulang (Copy Again)</span>
+            <span>Copy Again</span>
           </button>
           <button
             type="button"
             onClick={onClose}
             className="px-3 py-1.5 rounded-xl text-xs font-medium bg-neutral-800 hover:bg-neutral-700 text-neutral-200 transition-colors cursor-pointer"
           >
-            Tutup (Close)
+            Close
           </button>
         </div>
       </div>

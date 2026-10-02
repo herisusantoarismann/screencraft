@@ -48,7 +48,7 @@ export const FlowNodeEditPopover: React.FC<FlowNodeEditPopoverProps> = ({
           type="button"
           onClick={onClose}
           className="text-neutral-400 hover:text-white p-0.5 rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
-          title="Tutup"
+          title="Close"
         >
           <X className="w-3.5 h-3.5" />
         </button>
@@ -56,7 +56,7 @@ export const FlowNodeEditPopover: React.FC<FlowNodeEditPopoverProps> = ({
 
       <div className="flex flex-col gap-1 mb-2.5">
         <label className="text-[10px] uppercase font-bold text-neutral-400">
-          Judul Langkah
+          Step Title
         </label>
         <input
           type="text"
@@ -65,13 +65,13 @@ export const FlowNodeEditPopover: React.FC<FlowNodeEditPopoverProps> = ({
             onUpdateNodeText(activeNode.id, e.target.value, activeNode.description)
           }
           className="w-full px-2.5 py-1.5 bg-neutral-950/80 border border-neutral-700/80 rounded-lg text-xs text-white focus:outline-hidden focus:border-purple-500"
-          placeholder="Contoh: Klik tombol submit"
+          placeholder="e.g. Click submit button"
         />
       </div>
 
       <div className="flex flex-col gap-1 mb-3">
         <label className="text-[10px] uppercase font-bold text-neutral-400">
-          Deskripsi / Detail
+          Description / Details
         </label>
         <textarea
           rows={3}
@@ -80,7 +80,7 @@ export const FlowNodeEditPopover: React.FC<FlowNodeEditPopoverProps> = ({
             onUpdateNodeText(activeNode.id, activeNode.title, e.target.value)
           }
           className="w-full px-2.5 py-1.5 bg-neutral-950/80 border border-neutral-700/80 rounded-lg text-xs text-neutral-200 focus:outline-hidden focus:border-purple-500 resize-none"
-          placeholder="Contoh: Form validasi gagal dan toast error muncul"
+          placeholder="e.g. Validation fails and error toast appears"
         />
       </div>
 
@@ -91,14 +91,14 @@ export const FlowNodeEditPopover: React.FC<FlowNodeEditPopoverProps> = ({
           className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-red-400 hover:text-red-300 hover:bg-red-950/50 transition-colors cursor-pointer"
         >
           <Trash2 className="w-3.5 h-3.5" />
-          <span>Hapus</span>
+          <span>Delete</span>
         </button>
         <button
           type="button"
           onClick={onClose}
           className="px-3 py-1 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-semibold shadow-md shadow-purple-600/30 transition-all cursor-pointer"
         >
-          Selesai
+          Done
         </button>
       </div>
     </div>

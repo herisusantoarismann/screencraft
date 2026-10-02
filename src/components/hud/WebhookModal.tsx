@@ -121,7 +121,7 @@ export const WebhookModal: React.FC<WebhookModalProps> = ({
         if (!trimmedUrl) {
             setFeedback({
                 type: "error",
-                message: "Silakan masukkan Webhook URL Discord atau Slack.",
+                message: "Please enter a valid Discord or Slack Webhook URL.",
             });
             return;
         }
@@ -134,7 +134,7 @@ export const WebhookModal: React.FC<WebhookModalProps> = ({
             if (!imageData) {
                 setFeedback({
                     type: "error",
-                    message: "Gagal mengambil data gambar dari canvas.",
+                    message: "Failed to capture image data from canvas.",
                 });
                 setIsSending(false);
                 return;
@@ -181,7 +181,7 @@ export const WebhookModal: React.FC<WebhookModalProps> = ({
                 setLastWebhookUrl(trimmedUrl);
                 setFeedback({
                     type: "success",
-                    message: `Berhasil dikirim ke channel ${type === "slack" ? "Slack" : "Discord"}!`,
+                    message: `Successfully sent to ${type === "slack" ? "Slack" : "Discord"} channel!`,
                 });
                 setTimeout(() => {
                     onClose();
@@ -190,14 +190,14 @@ export const WebhookModal: React.FC<WebhookModalProps> = ({
                 setFeedback({
                     type: "error",
                     message:
-                        "Gagal mengirim webhook. Pastikan URL valid dan aktif.",
+                        "Failed to send webhook. Please verify that the URL is valid and active.",
                 });
             }
         } catch (err) {
             console.error("[WebhookModal] Submit error:", err);
             setFeedback({
                 type: "error",
-                message: "Terjadi kesalahan saat memproses permintaan webhook.",
+                message: "An error occurred while processing the webhook request.",
             });
         } finally {
             setIsSending(false);
@@ -213,13 +213,13 @@ export const WebhookModal: React.FC<WebhookModalProps> = ({
                 <div className="flex items-center justify-between px-5 py-3.5 border-b border-neutral-800 bg-neutral-950/60 shrink-0">
                     <div className="flex items-center gap-2 text-indigo-400 font-semibold text-sm">
                         <Send className="w-4 h-4" />
-                        <span>Kirim ke Webhook (Discord / Slack)</span>
+                        <span>Send to Webhook (Discord / Slack)</span>
                     </div>
                     <button
                         type="button"
                         onClick={onClose}
                         className="text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
-                        title="Tutup"
+                        title="Close"
                     >
                         <X className="w-4 h-4" />
                     </button>
@@ -249,7 +249,7 @@ export const WebhookModal: React.FC<WebhookModalProps> = ({
                             type="url"
                             value={webhookUrl}
                             onChange={handleUrlChange}
-                            placeholder="https://discord.com/api/webhooks/... atau https://hooks.slack.com/..."
+                            placeholder="https://discord.com/api/webhooks/... or https://hooks.slack.com/..."
                             className="w-full px-3 py-2 bg-neutral-950/90 border border-neutral-700/80 rounded-xl text-xs text-white placeholder-neutral-500 focus:outline-hidden focus:border-indigo-500 transition-colors"
                         />
                     </div>
@@ -259,14 +259,14 @@ export const WebhookModal: React.FC<WebhookModalProps> = ({
                         <label className="text-[11px] uppercase font-bold text-neutral-400 flex items-center gap-1.5">
                             <MessageSquare className="w-3 h-3 text-neutral-400" />
                             <span>
-                                Catatan / Keterangan (Markdown didukung)
+                                Notes / Description (Markdown supported)
                             </span>
                         </label>
                         <textarea
                             rows={3}
                             value={notes}
                             onChange={(e) => setNotes(e.target.value)}
-                            placeholder="Tulis pesan pengantar atau bug report di sini..."
+                            placeholder="Write introductory notes or bug report summary here..."
                             className="w-full px-3 py-2 bg-neutral-950/90 border border-neutral-700/80 rounded-xl text-xs text-neutral-200 placeholder-neutral-500 focus:outline-hidden focus:border-indigo-500 resize-none transition-colors"
                         />
                     </div>
@@ -279,14 +279,14 @@ export const WebhookModal: React.FC<WebhookModalProps> = ({
                                 <span>Stack Trace / Console Error (F12 / API 500)</span>
                             </label>
                             <span className="text-[10px] text-neutral-500 font-normal">
-                                Opsional
+                                Optional
                             </span>
                         </div>
                         <textarea
                             rows={3}
                             value={stackTrace}
                             onChange={(e) => setStackTrace(e.target.value)}
-                            placeholder="Paste error inspect console (F12) atau response 500 API di sini..."
+                            placeholder="Paste console inspect error (F12) or API 500 payload here..."
                             className="w-full px-3 py-2 bg-neutral-950/90 border border-neutral-700/80 rounded-xl text-xs font-mono text-rose-300 placeholder-neutral-600 focus:outline-hidden focus:border-rose-500/80 resize-none transition-colors"
                         />
                     </div>
@@ -306,7 +306,7 @@ export const WebhookModal: React.FC<WebhookModalProps> = ({
                                 <div className="flex items-center gap-1.5 text-xs text-neutral-300 font-medium">
                                     <ShieldCheck className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                                     <span>
-                                        Sertakan Spesifikasi Hardware & Environment
+                                        Include Hardware & Environment Specifications
                                     </span>
                                 </div>
                             </label>
@@ -316,16 +316,16 @@ export const WebhookModal: React.FC<WebhookModalProps> = ({
                                     <div className="flex items-center justify-between text-[11px] text-neutral-400">
                                         <span className="flex items-center gap-1.5 font-semibold">
                                             <AppWindow className="w-3.5 h-3.5 text-purple-400" />
-                                            <span>Target Aplikasi & Title</span>
+                                            <span>Target Application & Title</span>
                                         </span>
-                                        <span className="text-[10px] text-indigo-400 font-mono">Bisa Diedit Manual</span>
+                                        <span className="text-[10px] text-indigo-400 font-mono">Editable</span>
                                     </div>
 
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                                        {/* Dropdown Aplikasi Aktif */}
+                                        {/* Active Application Dropdown */}
                                         <div className="flex flex-col gap-1">
                                             <label className="text-[10px] font-semibold text-neutral-400">
-                                                Aplikasi Aktif
+                                                Active Application
                                             </label>
                                             <select
                                                 value={isCustomApp ? "__custom__" : targetApp}
@@ -335,7 +335,7 @@ export const WebhookModal: React.FC<WebhookModalProps> = ({
                                                 {/* Detected current active app */}
                                                 {diagnostics.active_window_app && (
                                                     <option value={diagnostics.active_window_app}>
-                                                        {diagnostics.active_window_app} (Terdeteksi)
+                                                        {diagnostics.active_window_app} (Detected)
                                                     </option>
                                                 )}
 
@@ -348,7 +348,7 @@ export const WebhookModal: React.FC<WebhookModalProps> = ({
                                                         </option>
                                                     ))}
 
-                                                <option value="__custom__">✏️ Ketik Manual...</option>
+                                                <option value="__custom__">✏️ Custom Input...</option>
                                             </select>
 
                                             {/* Input manual if custom selected */}
@@ -357,7 +357,7 @@ export const WebhookModal: React.FC<WebhookModalProps> = ({
                                                     type="text"
                                                     value={targetApp}
                                                     onChange={(e) => setTargetApp(e.target.value)}
-                                                    placeholder="Nama aplikasi..."
+                                                    placeholder="Application name..."
                                                     autoFocus
                                                     className="w-full mt-1 px-2.5 py-1.5 bg-neutral-900 border border-indigo-500/80 rounded-lg text-xs text-white placeholder-neutral-500 focus:outline-hidden focus:border-indigo-400 transition-colors"
                                                 />
@@ -367,7 +367,7 @@ export const WebhookModal: React.FC<WebhookModalProps> = ({
                                         {/* Judul Window / Tab (Input Bebas) */}
                                         <div className="flex flex-col gap-1">
                                             <label className="text-[10px] font-semibold text-neutral-400">
-                                                Judul Window / Tab
+                                                Window / Tab Title
                                             </label>
                                             <input
                                                 type="text"
@@ -406,7 +406,7 @@ export const WebhookModal: React.FC<WebhookModalProps> = ({
                 <div className="flex items-center justify-between px-5 py-3 border-t border-neutral-800 bg-neutral-950/40">
                     <div className="flex items-center gap-1 text-[11px] text-neutral-400">
                         <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                        <span>URL disimpan otomatis</span>
+                        <span>URL saved automatically</span>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -416,7 +416,7 @@ export const WebhookModal: React.FC<WebhookModalProps> = ({
                             disabled={isSending}
                             className="px-3 py-1.5 rounded-xl text-xs font-medium bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition-colors cursor-pointer disabled:opacity-50"
                         >
-                            Batal
+                            Cancel
                         </button>
                         <button
                             type="button"
@@ -427,12 +427,12 @@ export const WebhookModal: React.FC<WebhookModalProps> = ({
                             {isSending ? (
                                 <>
                                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                    <span>Mengirim...</span>
+                                    <span>Sending...</span>
                                 </>
                             ) : (
                                 <>
                                     <Send className="w-3.5 h-3.5" />
-                                    <span>Kirim ke Channel</span>
+                                    <span>Send to Channel</span>
                                 </>
                             )}
                         </button>

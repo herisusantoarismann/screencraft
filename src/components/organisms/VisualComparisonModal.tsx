@@ -136,7 +136,7 @@ export const VisualComparisonModal: React.FC<VisualComparisonModalProps> = ({
                     if (blob) {
                         loadMockupFromBlob(blob);
                         setStatusMessage(
-                            "Mockup Figma berhasil di-paste dari clipboard! 📋",
+                            "Figma mockup pasted from clipboard! 📋",
                         );
                         setTimeout(() => setStatusMessage(null), 3000);
                         break;
@@ -183,7 +183,7 @@ export const VisualComparisonModal: React.FC<VisualComparisonModalProps> = ({
         const file = e.target.files?.[0];
         if (file) {
             loadMockupFromBlob(file);
-            setStatusMessage("Mockup berhasil dimuat! 🎨");
+            setStatusMessage("Mockup loaded successfully! 🎨");
             setTimeout(() => setStatusMessage(null), 3000);
         }
     };
@@ -403,22 +403,22 @@ export const VisualComparisonModal: React.FC<VisualComparisonModalProps> = ({
         setIsCopying(true);
         try {
             const canvas = await generateComparisonCanvas();
-            if (!canvas) throw new Error("Gagal merender canvas komparasi.");
+            if (!canvas) throw new Error("Failed to render comparison canvas.");
 
             canvas.toBlob(async (blob) => {
-                if (!blob) throw new Error("Gagal membuat blob gambar.");
+                if (!blob) throw new Error("Failed to generate image blob.");
                 await navigator.clipboard.write([
                     new ClipboardItem({ "image/png": blob }),
                 ]);
                 setStatusMessage(
-                    "Gambar hasil komparasi tersalin ke clipboard! 📋",
+                    "Comparison image copied to clipboard! 📋",
                 );
                 setIsCopying(false);
                 setTimeout(() => setStatusMessage(null), 3000);
             }, "image/png");
         } catch (err) {
             console.error("Failed to copy diff image:", err);
-            setStatusMessage("Gagal menyalin gambar komparasi.");
+            setStatusMessage("Failed to copy comparison image.");
             setIsCopying(false);
             setTimeout(() => setStatusMessage(null), 3000);
         }
@@ -429,7 +429,7 @@ export const VisualComparisonModal: React.FC<VisualComparisonModalProps> = ({
         setIsDownloading(true);
         try {
             const canvas = await generateComparisonCanvas();
-            if (!canvas) throw new Error("Gagal merender canvas komparasi.");
+            if (!canvas) throw new Error("Failed to render comparison canvas.");
 
             const dataUrl = canvas.toDataURL("image/png");
             const now = new Date();
@@ -446,10 +446,10 @@ export const VisualComparisonModal: React.FC<VisualComparisonModalProps> = ({
 
             if (res.canceled) return;
 
-            setStatusMessage(`Gambar komparasi (${res.fileName || targetName}) berhasil disimpan! 🎉`);
+            setStatusMessage(`Comparison image (${res.fileName || targetName}) saved successfully! 🎉`);
         } catch (err) {
             console.error("Failed to download diff image:", err);
-            setStatusMessage("Gagal menyimpan gambar komparasi.");
+            setStatusMessage("Failed to save comparison image.");
         } finally {
             setIsDownloading(false);
             setTimeout(() => setStatusMessage(null), 3000);
@@ -517,7 +517,7 @@ export const VisualComparisonModal: React.FC<VisualComparisonModalProps> = ({
                             type="button"
                             onClick={onClose}
                             className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
-                            title="Tutup Modal"
+                            title="Close"
                         >
                             <X className="w-4 h-4" />
                         </button>
@@ -645,7 +645,7 @@ export const VisualComparisonModal: React.FC<VisualComparisonModalProps> = ({
                                                 ? "bg-amber-500 text-black font-bold animate-pulse"
                                                 : "bg-neutral-800 hover:bg-neutral-700 text-neutral-300"
                                         }`}
-                                        title="Blink otomatis bergantian untuk deteksi pergeseran 1px"
+                                        title="Auto-blink comparison to detect 1px shift"
                                     >
                                         <Zap className="w-3 h-3" />
                                         <span>Flicker</span>
@@ -669,7 +669,7 @@ export const VisualComparisonModal: React.FC<VisualComparisonModalProps> = ({
                                             setOffsetX((prev) => prev - 1)
                                         }
                                         className="px-1.5 py-0.5 bg-neutral-800 hover:bg-neutral-700 rounded text-[10px] font-mono cursor-pointer"
-                                        title="Nudge Kiri 1px (ArrowLeft)"
+                                        title="Nudge Left 1px (ArrowLeft)"
                                     >
                                         ◀
                                     </button>
@@ -679,7 +679,7 @@ export const VisualComparisonModal: React.FC<VisualComparisonModalProps> = ({
                                             setOffsetX((prev) => prev + 1)
                                         }
                                         className="px-1.5 py-0.5 bg-neutral-800 hover:bg-neutral-700 rounded text-[10px] font-mono cursor-pointer"
-                                        title="Nudge Kanan 1px (ArrowRight)"
+                                        title="Nudge Right 1px (ArrowRight)"
                                     >
                                         ▶
                                     </button>
@@ -689,7 +689,7 @@ export const VisualComparisonModal: React.FC<VisualComparisonModalProps> = ({
                                             setOffsetY((prev) => prev - 1)
                                         }
                                         className="px-1.5 py-0.5 bg-neutral-800 hover:bg-neutral-700 rounded text-[10px] font-mono cursor-pointer"
-                                        title="Nudge Atas 1px (ArrowUp)"
+                                        title="Nudge Up 1px (ArrowUp)"
                                     >
                                         ▲
                                     </button>
@@ -699,7 +699,7 @@ export const VisualComparisonModal: React.FC<VisualComparisonModalProps> = ({
                                             setOffsetY((prev) => prev + 1)
                                         }
                                         className="px-1.5 py-0.5 bg-neutral-800 hover:bg-neutral-700 rounded text-[10px] font-mono cursor-pointer"
-                                        title="Nudge Bawah 1px (ArrowDown)"
+                                        title="Nudge Down 1px (ArrowDown)"
                                     >
                                         ▼
                                     </button>
@@ -709,16 +709,16 @@ export const VisualComparisonModal: React.FC<VisualComparisonModalProps> = ({
                                     type="button"
                                     onClick={handleAutoFitWidth}
                                     className="ml-1 px-2 py-0.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded text-[11px] transition-colors cursor-pointer"
-                                    title="Sesuaikan lebar mockup dengan lebar screenshot web"
+                                    title="Fit mockup width to screenshot width"
                                 >
-                                    Fit Lebar
+                                    Fit Width
                                 </button>
 
                                 <button
                                     type="button"
                                     onClick={handleResetAlignment}
                                     className="p-1 hover:bg-neutral-800 text-neutral-400 hover:text-white rounded transition-colors cursor-pointer"
-                                    title="Reset Posisi & Skala"
+                                    title="Reset Position & Scale"
                                 >
                                     <RotateCcw className="w-3.5 h-3.5" />
                                 </button>
@@ -743,8 +743,8 @@ export const VisualComparisonModal: React.FC<VisualComparisonModalProps> = ({
                             <Upload className="w-3.5 h-3.5" />
                             <span>
                                 {mockupImage
-                                    ? "Ganti Mockup Figma"
-                                    : "Pilih File Mockup"}
+                                    ? "Change Figma Mockup"
+                                    : "Select Mockup File"}
                             </span>
                         </button>
                     </div>
@@ -770,26 +770,26 @@ export const VisualComparisonModal: React.FC<VisualComparisonModalProps> = ({
 
                             <div>
                                 <h4 className="font-bold text-base text-neutral-100 mb-1">
-                                    Masukkan Mockup Desain (Figma)
+                                    Import Design Mockup (Figma)
                                 </h4>
                                 <p className="text-xs text-neutral-400 leading-relaxed">
-                                    Tarik & lepas file gambar (.png, .jpg) ke
-                                    sini, klik untuk memilih file, atau{" "}
+                                    Drag & drop an image file (.png, .jpg) here,
+                                    click to browse, or{" "}
                                     <strong className="text-pink-300">
-                                        langsung tekan Ctrl + V
+                                        press Ctrl + V
                                     </strong>{" "}
-                                    untuk paste dari clipboard.
+                                    to paste directly from clipboard.
                                 </p>
                             </div>
 
                             <div className="p-2 bg-neutral-900/90 border border-neutral-800 rounded-xl text-[11px] text-neutral-300 flex items-center gap-1.5 mt-2">
                                 <span className="font-semibold text-pink-400">
-                                    💡 Tip QA:
+                                    💡 QA Tip:
                                 </span>
                                 <span>
-                                    Di Figma, seleksi frame lalu tekan Ctrl +
-                                    Shift + C (Copy as PNG), lalu tekan Ctrl + V
-                                    di sini!
+                                    In Figma, select your frame, press Ctrl +
+                                    Shift + C (Copy as PNG), then press Ctrl + V
+                                    here!
                                 </span>
                             </div>
                         </div>
@@ -1011,7 +1011,7 @@ export const VisualComparisonModal: React.FC<VisualComparisonModalProps> = ({
                             {isDownloading ? (
                                 <>
                                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                    <span>Mengunduh...</span>
+                                    <span>Downloading...</span>
                                 </>
                             ) : (
                                 <>
@@ -1032,12 +1032,12 @@ export const VisualComparisonModal: React.FC<VisualComparisonModalProps> = ({
                             {isCopying ? (
                                 <>
                                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                    <span>Menyalin Gambar...</span>
+                                    <span>Copying Image...</span>
                                 </>
                             ) : (
                                 <>
                                     <Copy className="w-3.5 h-3.5" />
-                                    <span>Salin Gambar Diff</span>
+                                    <span>Copy Diff Image</span>
                                 </>
                             )}
                         </button>

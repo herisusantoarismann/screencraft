@@ -55,7 +55,7 @@ export const DiagnosticsModal: React.FC<DiagnosticsModalProps> = ({
                         type="button"
                         onClick={onClose}
                         className="text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
-                        title="Tutup"
+                        title="Close"
                     >
                         <X className="w-4 h-4" />
                     </button>
@@ -215,7 +215,7 @@ export const DiagnosticsModal: React.FC<DiagnosticsModalProps> = ({
                             </span>
                         ) : (
                             <span>
-                                Siap untuk dilampirkan ke Jira / GitHub ticket
+                                Ready to attach to Jira / GitHub ticket
                             </span>
                         )}
                     </div>
@@ -234,7 +234,7 @@ export const DiagnosticsModal: React.FC<DiagnosticsModalProps> = ({
                             onClick={onClose}
                             className="px-3 py-1.5 rounded-xl text-xs font-medium bg-neutral-800 hover:bg-neutral-700 text-neutral-200 transition-colors cursor-pointer"
                         >
-                            Tutup
+                            Close
                         </button>
                     </div>
                 </div>
