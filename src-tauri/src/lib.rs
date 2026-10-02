@@ -212,6 +212,79 @@ fn trigger_screenshot(window: WebviewWindow) -> Result<String, String> {
     do_capture_screen()
 }
 
+#[derive(serde::Serialize)]
+pub struct SaveResult {
+    pub success: bool,
+    pub saved_path: Option<String>,
+    pub saved_dir: Option<String>,
+    pub file_name: Option<String>,
+}
+
+#[tauri::command]
+fn save_file_with_dialog(
+    window: WebviewWindow,
+    default_name: String,
+    base64_data: String,
+    last_dir: Option<String>,
+    filter_name: String,
+    filter_extension: String,
+) -> Result<SaveResult, String> {
+    let clean_base64 = if let Some(pos) = base64_data.find(',') {
+        &base64_data[pos + 1..]
+    } else {
+        &base64_data
+    };
+
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(clean_base64)
+        .map_err(|e| format!("Failed to decode base64 data: {e}"))?;
+
+    let mut dialog = rfd::FileDialog::new()
+        .set_file_name(&default_name);
+
+    if !filter_extension.is_empty() && filter_extension != "*" {
+        dialog = dialog.add_filter(&filter_name, &[&filter_extension]);
+    }
+
+    if let Some(ref dir) = last_dir {
+        let p = std::path::Path::new(dir);
+        if p.exists() && p.is_dir() {
+            dialog = dialog.set_directory(p);
+        } else if let Ok(download_dir) = window.path().download_dir() {
+            dialog = dialog.set_directory(&download_dir);
+        }
+    } else if let Ok(download_dir) = window.path().download_dir() {
+        dialog = dialog.set_directory(&download_dir);
+    }
+
+    // Temporarily disable always on top so native Windows dialog appears cleanly in front
+    let _ = window.set_always_on_top(false);
+    let picked = dialog.save_file();
+    let _ = window.set_always_on_top(true);
+
+    if let Some(path) = picked {
+        std::fs::write(&path, bytes)
+            .map_err(|e| format!("Failed to write file to {}: {e}", path.display()))?;
+
+        let saved_dir = path.parent().map(|p| p.to_string_lossy().to_string());
+        let file_name = path.file_name().map(|f| f.to_string_lossy().to_string());
+
+        Ok(SaveResult {
+            success: true,
+            saved_path: Some(path.to_string_lossy().to_string()),
+            saved_dir,
+            file_name,
+        })
+    } else {
+        Ok(SaveResult {
+            success: false,
+            saved_path: None,
+            saved_dir: None,
+            file_name: None,
+        })
+    }
+}
+
 #[tauri::command]
 fn save_file_to_downloads(window: WebviewWindow, file_name: String, base64_data: String) -> Result<String, String> {
     let clean_base64 = if let Some(pos) = base64_data.find(',') {
@@ -466,6 +539,7 @@ pub fn run() {
             exit_ticket_floater_mode,
             trigger_screenshot,
             save_file_to_downloads,
+            save_file_with_dialog,
             send_slack_webhook,
             send_discord_webhook,
             get_system_diagnostics
