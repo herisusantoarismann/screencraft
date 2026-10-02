@@ -3,8 +3,8 @@ import { createWorker, type Worker } from "tesseract.js";
 let workerPromise: Promise<Worker> | null = null;
 
 /**
- * Mendapatkan atau menginisialisasi singleton Tesseract Worker.
- * Default bahasa: 'eng+ind' dengan fallback otomatis ke 'eng'.
+ * Get or initialize the singleton Tesseract Worker.
+ * Default languages: 'eng+ind' with automatic fallback to 'eng'.
  */
 async function getOcrWorker(): Promise<Worker> {
   if (!workerPromise) {
@@ -14,7 +14,7 @@ async function getOcrWorker(): Promise<Worker> {
         return worker;
       } catch (err) {
         console.warn(
-          "[ocrService] Inisialisasi 'eng+ind' gagal, beralih ke 'eng':",
+          "[ocrService] 'eng+ind' initialization failed, falling back to 'eng':",
           err
         );
         const fallbackWorker = await createWorker("eng");
@@ -26,15 +26,15 @@ async function getOcrWorker(): Promise<Worker> {
 }
 
 /**
- * Mengekstrak teks dari potongan area gambar (Data URL base64) menggunakan Tesseract.js.
- * @param imageDataUrl Data URL gambar (image/png atau image/jpeg)
- * @returns Teks hasil ekstraksi OCR
+ * Extracts text from an image region (base64 Data URL) using Tesseract.js.
+ * @param imageDataUrl Image data URL (image/png or image/jpeg)
+ * @returns Extracted OCR text
  */
 export async function extractTextFromArea(
   imageDataUrl: string
 ): Promise<string> {
   if (!imageDataUrl) {
-    throw new Error("Data URL gambar kosong");
+    throw new Error("Image data URL is empty");
   }
 
   try {
@@ -42,8 +42,8 @@ export async function extractTextFromArea(
     const result = await worker.recognize(imageDataUrl);
     return result.data.text.trim();
   } catch (err) {
-    console.error("[ocrService] Gagal menjalankan OCR, merefresh worker:", err);
-    // Jika worker lama bermasalah, reset promise dan buat worker bersih baru
+    console.error("[ocrService] OCR execution failed, refreshing worker:", err);
+    // If old worker failed, reset promise and create a fresh worker
     workerPromise = null;
     const freshWorker = await createWorker("eng");
     const result = await freshWorker.recognize(imageDataUrl);
@@ -52,7 +52,7 @@ export async function extractTextFromArea(
 }
 
 /**
- * Membersihkan worker Tesseract saat tidak digunakan lagi.
+ * Clean up Tesseract worker when no longer needed.
  */
 export async function terminateOcrWorker(): Promise<void> {
   if (workerPromise) {
@@ -60,7 +60,7 @@ export async function terminateOcrWorker(): Promise<void> {
       const worker = await workerPromise;
       await worker.terminate();
     } catch (e) {
-      console.error("[ocrService] Gagal terminate worker:", e);
+      console.error("[ocrService] Failed to terminate worker:", e);
     } finally {
       workerPromise = null;
     }

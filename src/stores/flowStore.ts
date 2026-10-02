@@ -33,7 +33,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
       x: Math.round(x),
       y: Math.round(y),
       title: `Step ${nextStep}`,
-      description: `Deskripsi untuk langkah ${nextStep}`,
+      description: `Description for step ${nextStep}`,
     };
 
     set({
@@ -86,7 +86,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
  */
 export const exportFlowToMarkdown = (nodes: FlowNode[]): string => {
   if (nodes.length === 0) {
-    return "### Workflow / Reproduction Steps\n\n*(Belum ada langkah yang dibuat)*\n";
+    return "### Workflow / Reproduction Steps\n\n*(No steps created yet)*\n";
   }
 
   const lines: string[] = ["### Workflow / Reproduction Steps\n"];
