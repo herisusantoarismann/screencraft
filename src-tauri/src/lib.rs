@@ -2,7 +2,7 @@ use base64::Engine;
 use std::io::Cursor;
 use std::str::FromStr;
 use tauri::{
-    menu::{MenuBuilder, MenuItemBuilder},
+    menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Emitter, Manager, WebviewWindow,
 };
@@ -466,48 +466,99 @@ pub fn run() {
             app.global_shortcut().register(shortcut)?;
 
             // System Tray Menu items
-            let app_title_item = MenuItemBuilder::with_id("title", "ScreenCraft").enabled(false).build(app)?;
-            let capture_item = MenuItemBuilder::with_id("capture", "Capture Screen (Ctrl+Shift+S)").build(app)?;
-            let record_item = MenuItemBuilder::with_id("record", "Quick Record").build(app)?;
-            let quit_item = MenuItemBuilder::with_id("quit", "Quit ScreenCraft").build(app)?;
+            let show_floating_item = MenuItem::with_id(app, "show_floating", "Show Floating", true, None::<&str>)?;
+            let take_screenshot_item = MenuItem::with_id(app, "take_screenshot", "Take Screenshot (Ctrl+Shift+S)", true, None::<&str>)?;
+            let record_screen_item = MenuItem::with_id(app, "record_screen", "Record Screen", true, None::<&str>)?;
+            let separator1 = PredefinedMenuItem::separator(app)?;
+            let settings_item = MenuItem::with_id(app, "settings", "Settings / Preferences", true, None::<&str>)?;
+            let about_item = MenuItem::with_id(app, "about", "About ScreenCraft", true, None::<&str>)?;
+            let separator2 = PredefinedMenuItem::separator(app)?;
+            let exit_item = MenuItem::with_id(app, "exit", "Exit", true, None::<&str>)?;
 
-            let tray_menu = MenuBuilder::new(app)
-                .item(&app_title_item)
-                .separator()
-                .item(&capture_item)
-                .item(&record_item)
-                .separator()
-                .item(&quit_item)
-                .build()?;
+            let tray_menu = Menu::with_items(
+                app,
+                &[
+                    &show_floating_item,
+                    &take_screenshot_item,
+                    &record_screen_item,
+                    &separator1,
+                    &settings_item,
+                    &about_item,
+                    &separator2,
+                    &exit_item,
+                ],
+            )?;
+
+            let handle_take_screenshot = |app: &tauri::AppHandle| {
+                if let Some(window) = app.get_webview_window("main") {
+                    #[cfg(target_os = "windows")]
+                    exclude_from_capture(&window);
+
+                    let app_handle = app.clone();
+                    tauri::async_runtime::spawn(async move {
+                        match do_capture_screen() {
+                            Ok(base64) => {
+                                let _ = app_handle.emit("trigger-capture", Some(base64));
+                            }
+                            Err(e) => {
+                                eprintln!("Failed to capture screen from tray: {e}");
+                                let _ = app_handle.emit("trigger-capture", Option::<String>::None);
+                            }
+                        }
+                    });
+                }
+            };
 
             let mut tray_builder = TrayIconBuilder::new()
                 .tooltip("ScreenCraft")
                 .title("ScreenCraft")
                 .menu(&tray_menu)
                 .show_menu_on_left_click(false)
-                .on_menu_event(|app, event| {
+                .on_menu_event(move |app, event| {
                     match event.id().as_ref() {
-                        "capture" => {
+                        "show_floating" => {
                             if let Some(window) = app.get_webview_window("main") {
                                 let _ = enter_floating_bar_mode(window.clone());
                                 let _ = app.emit("open-floating-bar", ());
+                                let _ = app.emit("tray-show-floating", ());
                                 let _ = window.emit("open-floating-bar", ());
+                                let _ = window.emit("tray-show-floating", ());
                             }
                         }
-                        "record" => {
+                        "take_screenshot" => {
+                            handle_take_screenshot(app);
+                        }
+                        "record_screen" => {
                             if let Some(window) = app.get_webview_window("main") {
-                                let _ = enter_floating_bar_mode(window.clone());
-                                let _ = app.emit("open-floating-bar", ());
-                                let _ = window.emit("open-floating-bar", ());
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                                let _ = app.emit("trigger-record", ());
+                                let _ = window.emit("trigger-record", ());
                             }
                         }
-                        "quit" => {
+                        "settings" => {
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                                let _ = app.emit("open-settings", ());
+                                let _ = window.emit("open-settings", ());
+                            }
+                        }
+                        "about" => {
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                                let _ = app.emit("open-about", ());
+                                let _ = window.emit("open-about", ());
+                            }
+                        }
+                        "exit" => {
                             app.exit(0);
                         }
                         _ => {}
                     }
                 })
-                .on_tray_icon_event(|tray, event| {
+                .on_tray_icon_event(move |tray, event| {
                     if let TrayIconEvent::Click {
                         button: MouseButton::Left,
                         button_state: MouseButtonState::Up,
@@ -515,11 +566,7 @@ pub fn run() {
                     } = event
                     {
                         let app = tray.app_handle();
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = enter_floating_bar_mode(window.clone());
-                            let _ = app.emit("open-floating-bar", ());
-                            let _ = window.emit("open-floating-bar", ());
-                        }
+                        handle_take_screenshot(app);
                     }
                 });
 

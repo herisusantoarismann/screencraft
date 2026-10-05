@@ -11,3 +11,5 @@ export * from "../recorder/VideoTrimModal";
 export * from "../hud/WebhookModal";
 export * from "./DiagnosticsModal";
 export * from "./VisualComparisonModal";
+export * from "./AboutModal";
+export * from "./SettingsModal";

@@ -2,9 +2,11 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import type { KonvaEventObject } from "konva/lib/Node";
 import type Konva from "konva";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { useToolStore, STAMP_PRESETS } from "../stores/toolStore";
 import { useFlowStore } from "../stores/flowStore";
 import { useRecordStore } from "../stores/recordStore";
+import { useSettingsStore } from "../stores/settingsStore";
 import { useScreenCapture } from "../hooks/useScreenCapture";
 import { useScreenRecorder } from "../hooks/useScreenRecorder";
 import { extractTextFromArea } from "../services/ocrService";
@@ -25,6 +27,7 @@ import {
 } from "../services/diagnosticsService";
 import { saveFileWithDialog } from "../services/fileSaveService";
 import { ScreenCraftTemplate } from "../components/templates";
+import { AboutModal, SettingsModal } from "../components/organisms";
 
 export const CapturePage: React.FC = () => {
     const {
@@ -43,6 +46,8 @@ export const CapturePage: React.FC = () => {
         setIsOcrProcessing,
         setSpotlightRadius,
     } = useToolStore();
+
+    const { autoCopyToClipboard, enableShutterFlash } = useSettingsStore();
 
     const {
         capturedImage,
@@ -92,10 +97,12 @@ export const CapturePage: React.FC = () => {
     // Trigger shutter flash as soon as a new screenshot image is captured
     useEffect(() => {
         if (capturedImage && !prevCapturedImageRef.current) {
-            triggerShutterFlash();
+            if (enableShutterFlash) {
+                triggerShutterFlash();
+            }
         }
         prevCapturedImageRef.current = capturedImage;
-    }, [capturedImage, triggerShutterFlash]);
+    }, [capturedImage, enableShutterFlash, triggerShutterFlash]);
 
     const [dimensions, setDimensions] = useState({
         width:
@@ -145,6 +152,9 @@ export const CapturePage: React.FC = () => {
     const [isDiagnosticsModalOpen, setIsDiagnosticsModalOpen] =
         useState<boolean>(false);
     const [isComparisonModalOpen, setIsComparisonModalOpen] =
+        useState<boolean>(false);
+    const [isAboutModalOpen, setIsAboutModalOpen] = useState<boolean>(false);
+    const [isSettingsModalOpen, setIsSettingsModalOpen] =
         useState<boolean>(false);
     const [includeDiagnosticsStamp, setIncludeDiagnosticsStamp] =
         useState<boolean>(false);
@@ -851,6 +861,106 @@ export const CapturePage: React.FC = () => {
         setActiveNodeId,
     ]);
 
+    // Close modal handlers (return window to floating HUD bar mode if not in capture mode)
+    const handleCloseAboutModal = useCallback(async () => {
+        setIsAboutModalOpen(false);
+        if (!capturedImage) {
+            await invoke("enter_floating_bar_mode");
+        }
+    }, [capturedImage]);
+
+    const handleCloseSettingsModal = useCallback(async () => {
+        setIsSettingsModalOpen(false);
+        if (!capturedImage) {
+            await invoke("enter_floating_bar_mode");
+        }
+    }, [capturedImage]);
+
+    // System Tray Event Listeners: "trigger-record", "open-about", "open-settings", "tray-show-floating"
+    useEffect(() => {
+        let unlistenRecord: (() => void) | undefined;
+        let unlistenAbout: (() => void) | undefined;
+        let unlistenSettings: (() => void) | undefined;
+        let unlistenTrayFloating: (() => void) | undefined;
+
+        const setupTrayListeners = async () => {
+            try {
+                unlistenRecord = await listen("trigger-record", () => {
+                    if (capturedImage) {
+                        void handleFullCancelCapture();
+                    }
+                    void startRecording();
+                });
+
+                unlistenAbout = await listen("open-about", async () => {
+                    if (!capturedImage) {
+                        await invoke("enter_fullscreen_mode");
+                    }
+                    setIsAboutModalOpen(true);
+                });
+
+                unlistenSettings = await listen("open-settings", async () => {
+                    if (!capturedImage) {
+                        await invoke("enter_fullscreen_mode");
+                    }
+                    setIsSettingsModalOpen(true);
+                });
+
+                unlistenTrayFloating = await listen("tray-show-floating", () => {
+                    if (capturedImage) {
+                        void handleFullCancelCapture();
+                    }
+                    setIsAboutModalOpen(false);
+                    setIsSettingsModalOpen(false);
+                });
+            } catch (err) {
+                console.error("[CapturePage] Failed to register tray listeners:", err);
+            }
+        };
+
+        void setupTrayListeners();
+
+        return () => {
+            if (unlistenRecord) unlistenRecord();
+            if (unlistenAbout) unlistenAbout();
+            if (unlistenSettings) unlistenSettings();
+            if (unlistenTrayFloating) unlistenTrayFloating();
+        };
+    }, [capturedImage, handleFullCancelCapture, startRecording]);
+
+    // Modal Escape key listener with capturing phase for instant precedence
+    useEffect(() => {
+        if (!isAboutModalOpen && !isSettingsModalOpen) return;
+
+        const handleModalEsc = (e: KeyboardEvent) => {
+            if (e.key === "Escape") {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                if (isAboutModalOpen) void handleCloseAboutModal();
+                if (isSettingsModalOpen) void handleCloseSettingsModal();
+            }
+        };
+
+        window.addEventListener("keydown", handleModalEsc, { capture: true });
+        return () =>
+            window.removeEventListener("keydown", handleModalEsc, {
+                capture: true,
+            });
+    }, [
+        isAboutModalOpen,
+        isSettingsModalOpen,
+        handleCloseAboutModal,
+        handleCloseSettingsModal,
+    ]);
+
+    // Auto-copy to clipboard on capture if enabled in settings
+    useEffect(() => {
+        if (capturedImage && autoCopyToClipboard) {
+            void handleCopyToClipboard();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [capturedImage, autoCopyToClipboard]);
+
     // Hierarchical Escape key handler when screenshot is active
     useEffect(() => {
         if (!capturedImage) return;
@@ -923,90 +1033,102 @@ export const CapturePage: React.FC = () => {
     ]);
 
     return (
-        <ScreenCraftTemplate
-            isRecording={isRecording}
-            recordingDuration={recordingDuration}
-            isCapturing={isCapturing}
-            isTransitioning={isTransitioning}
-            isPreparingRecord={isPreparingRecord}
-            isPreviewOpen={isPreviewOpen}
-            capturedImage={capturedImage}
-            dimensions={dimensions}
-            containerRef={containerRef}
-            activeTool={activeTool}
-            strokeColor={strokeColor}
-            strokeWidth={strokeWidth}
-            stepCounter={stepCounter}
-            spotlightRadius={spotlightRadius}
-            setSpotlightRadius={setSpotlightRadius}
-            annotations={annotations}
-            currentDrawing={currentDrawing}
-            cropArea={cropArea}
-            ocrArea={ocrArea}
-            stageRef={stageRef}
-            cropLayerRef={cropLayerRef}
-            ocrLayerRef={ocrLayerRef}
-            eyedropperData={eyedropperData}
-            eyedropperToast={eyedropperToast}
-            error={error}
-            flowNodes={nodes}
-            activeNode={activeNode}
-            isMarkdownModalOpen={isMarkdownModalOpen}
-            ocrModal={ocrModal}
-            isOcrProcessing={isOcrProcessing}
-            isWebhookModalOpen={isWebhookModalOpen}
-            isDiagnosticsModalOpen={isDiagnosticsModalOpen}
-            isComparisonModalOpen={isComparisonModalOpen}
-            includeDiagnosticsStamp={includeDiagnosticsStamp}
-            diagnostics={diagnostics}
-            ripples={ripples}
-            showShutterFlash={showShutterFlash}
-            isFlashActive={isFlashActive}
-            isCopying={isCopying}
-            copySuccess={copySuccess}
-            isDownloading={isDownloading}
-            downloadSuccess={downloadSuccess}
-            downloadToast={downloadToast}
-            onTriggerScreenshot={() => void triggerScreenshot()}
-            onStartRecording={() => void startRecording()}
-            onStopRecording={() => void stopRecording()}
-            onCloseOverlay={() => void closeOverlay()}
-            onSelectTool={setActiveTool}
-            onSelectColor={setStrokeColor}
-            onCopy={() => void handleCopyToClipboard()}
-            onDownloadPNG={handleDownloadPNG}
-            onOpenWebhookModal={setIsWebhookModalOpen}
-            onOpenMarkdownModal={setIsMarkdownModalOpen}
-            onOpenDiagnosticsModal={setIsDiagnosticsModalOpen}
-            onOpenComparisonModal={setIsComparisonModalOpen}
-            onToggleDiagnosticsStamp={() =>
-                setIncludeDiagnosticsStamp((prev) => !prev)
-            }
-            onResetCropArea={() => setCropArea(null)}
-            onClearAnnotations={clearAnnotations}
-            onCancelCapture={() => void handleFullCancelCapture()}
-            onCaptureScreenRetry={() => void captureScreen()}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onUpdateNodePosition={updateNodePosition}
-            onSelectNode={setActiveNodeId}
-            onCloseActiveNode={() => setActiveNodeId(null)}
-            onUpdateNodeText={updateNodeText}
-            onDeleteNode={deleteNode}
-            onCloseOcrModal={() =>
-                setOcrModal({ isOpen: false, text: "", copied: false })
-            }
-            onCopyOcrAgain={(text) => {
-                void navigator.clipboard.writeText(text);
-                setOcrModal((prev) => ({ ...prev, copied: true }));
-            }}
-            onCopyToClipboardWithImage={handleCopyToClipboard}
-            onCopyScreenshotOnly={handleCopyScreenshotOnly}
-            onGetImageDataUrlOrBlob={async () => {
-                const url = await getFinalExportDataUrl();
-                return url || "";
-            }}
-        />
+        <>
+            <ScreenCraftTemplate
+                isRecording={isRecording}
+                recordingDuration={recordingDuration}
+                isCapturing={isCapturing}
+                isTransitioning={isTransitioning}
+                isPreparingRecord={isPreparingRecord}
+                isPreviewOpen={isPreviewOpen}
+                capturedImage={capturedImage}
+                dimensions={dimensions}
+                containerRef={containerRef}
+                activeTool={activeTool}
+                strokeColor={strokeColor}
+                strokeWidth={strokeWidth}
+                stepCounter={stepCounter}
+                spotlightRadius={spotlightRadius}
+                setSpotlightRadius={setSpotlightRadius}
+                annotations={annotations}
+                currentDrawing={currentDrawing}
+                cropArea={cropArea}
+                ocrArea={ocrArea}
+                stageRef={stageRef}
+                cropLayerRef={cropLayerRef}
+                ocrLayerRef={ocrLayerRef}
+                eyedropperData={eyedropperData}
+                eyedropperToast={eyedropperToast}
+                error={error}
+                flowNodes={nodes}
+                activeNode={activeNode}
+                isMarkdownModalOpen={isMarkdownModalOpen}
+                ocrModal={ocrModal}
+                isOcrProcessing={isOcrProcessing}
+                isWebhookModalOpen={isWebhookModalOpen}
+                isDiagnosticsModalOpen={isDiagnosticsModalOpen}
+                isComparisonModalOpen={isComparisonModalOpen}
+                includeDiagnosticsStamp={includeDiagnosticsStamp}
+                diagnostics={diagnostics}
+                ripples={ripples}
+                showShutterFlash={showShutterFlash}
+                isFlashActive={isFlashActive}
+                isCopying={isCopying}
+                copySuccess={copySuccess}
+                isDownloading={isDownloading}
+                downloadSuccess={downloadSuccess}
+                downloadToast={downloadToast}
+                onTriggerScreenshot={() => void triggerScreenshot()}
+                onStartRecording={() => void startRecording()}
+                onStopRecording={() => void stopRecording()}
+                onCloseOverlay={() => void closeOverlay()}
+                onSelectTool={setActiveTool}
+                onSelectColor={setStrokeColor}
+                onCopy={() => void handleCopyToClipboard()}
+                onDownloadPNG={handleDownloadPNG}
+                onOpenWebhookModal={setIsWebhookModalOpen}
+                onOpenMarkdownModal={setIsMarkdownModalOpen}
+                onOpenDiagnosticsModal={setIsDiagnosticsModalOpen}
+                onOpenComparisonModal={setIsComparisonModalOpen}
+                onToggleDiagnosticsStamp={() =>
+                    setIncludeDiagnosticsStamp((prev) => !prev)
+                }
+                onResetCropArea={() => setCropArea(null)}
+                onClearAnnotations={clearAnnotations}
+                onCancelCapture={() => void handleFullCancelCapture()}
+                onCaptureScreenRetry={() => void captureScreen()}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onUpdateNodePosition={updateNodePosition}
+                onSelectNode={setActiveNodeId}
+                onCloseActiveNode={() => setActiveNodeId(null)}
+                onUpdateNodeText={updateNodeText}
+                onDeleteNode={deleteNode}
+                onCloseOcrModal={() =>
+                    setOcrModal({ isOpen: false, text: "", copied: false })
+                }
+                onCopyOcrAgain={(text) => {
+                    void navigator.clipboard.writeText(text);
+                    setOcrModal((prev) => ({ ...prev, copied: true }));
+                }}
+                onCopyToClipboardWithImage={handleCopyToClipboard}
+                onCopyScreenshotOnly={handleCopyScreenshotOnly}
+                onGetImageDataUrlOrBlob={async () => {
+                    const url = await getFinalExportDataUrl();
+                    return url || "";
+                }}
+            />
+
+            {/* System Tray & Preference Modals */}
+            <AboutModal
+                isOpen={isAboutModalOpen}
+                onClose={() => void handleCloseAboutModal()}
+            />
+            <SettingsModal
+                isOpen={isSettingsModalOpen}
+                onClose={() => void handleCloseSettingsModal()}
+            />
+        </>
     );
 };

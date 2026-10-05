@@ -132,6 +132,11 @@ export const useScreenCapture = (): UseScreenCaptureReturn => {
           setError(null);
         });
 
+        const unlistenTrayFloating = await listen("tray-show-floating", () => {
+          setCapturedImage(null);
+          setError(null);
+        });
+
         unlistenTrigger = await listen<string | null>("trigger-capture", async (event) => {
           if (event.payload) {
             setIsCapturing(true);
@@ -149,8 +154,14 @@ export const useScreenCapture = (): UseScreenCaptureReturn => {
               setIsCapturing(false);
               setIsTransitioning(false);
             }
+          } else {
+            await triggerScreenshot();
           }
         });
+
+        return () => {
+          if (unlistenTrayFloating) unlistenTrayFloating();
+        };
       } catch (err) {
         console.error("[useScreenCapture] Failed to register listeners:", err);
       }
