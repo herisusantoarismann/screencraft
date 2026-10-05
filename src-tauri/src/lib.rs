@@ -466,11 +466,14 @@ pub fn run() {
             app.global_shortcut().register(shortcut)?;
 
             // System Tray Menu items
+            let app_title_item = MenuItemBuilder::with_id("title", "ScreenCraft").enabled(false).build(app)?;
             let capture_item = MenuItemBuilder::with_id("capture", "Capture Screen (Ctrl+Shift+S)").build(app)?;
             let record_item = MenuItemBuilder::with_id("record", "Quick Record").build(app)?;
             let quit_item = MenuItemBuilder::with_id("quit", "Quit ScreenCraft").build(app)?;
 
             let tray_menu = MenuBuilder::new(app)
+                .item(&app_title_item)
+                .separator()
                 .item(&capture_item)
                 .item(&record_item)
                 .separator()
@@ -478,6 +481,8 @@ pub fn run() {
                 .build()?;
 
             let mut tray_builder = TrayIconBuilder::new()
+                .tooltip("ScreenCraft")
+                .title("ScreenCraft")
                 .menu(&tray_menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| {

@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "screencraft",
+  "productName": "ScreenCraft",
   "version": "0.1.0",
   "identifier": "com.my-pc.screencraft",
   "build": {
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "screencraft",
+        "title": "ScreenCraft",
         "fullscreen": false,
         "width": 620,
         "height": 74,
