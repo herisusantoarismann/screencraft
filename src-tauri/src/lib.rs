@@ -1,12 +1,29 @@
 use base64::Engine;
 use std::io::Cursor;
 use std::str::FromStr;
+use std::sync::Mutex;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Emitter, Manager, WebviewWindow,
 };
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
+
+pub struct HotkeyState {
+    pub screenshot: Mutex<String>,
+    pub record: Mutex<String>,
+    pub floating: Mutex<String>,
+}
+
+impl Default for HotkeyState {
+    fn default() -> Self {
+        Self {
+            screenshot: Mutex::new("CommandOrControl+Shift+S".to_string()),
+            record: Mutex::new("CommandOrControl+Shift+R".to_string()),
+            floating: Mutex::new("CommandOrControl+Shift+F".to_string()),
+        }
+    }
+}
 
 mod diagnostics;
 
@@ -315,6 +332,65 @@ fn close_overlay(window: WebviewWindow) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn set_window_always_on_top(window: WebviewWindow, always_on_top: bool) -> Result<(), String> {
+    window.set_always_on_top(always_on_top).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn disable_global_shortcuts(app: tauri::AppHandle) -> Result<(), String> {
+    app.global_shortcut()
+        .unregister_all()
+        .map_err(|e| format!("Failed to unregister global shortcuts: {e}"))
+}
+
+#[tauri::command]
+fn register_global_shortcut(app: tauri::AppHandle, shortcut: String) -> Result<(), String> {
+    let _ = app.global_shortcut().unregister_all();
+    let sc = Shortcut::from_str(&shortcut)
+        .map_err(|e| format!("Invalid shortcut format '{shortcut}': {e}"))?;
+    app.global_shortcut()
+        .register(sc)
+        .map_err(|e| format!("Failed to register shortcut '{shortcut}': {e}"))
+}
+
+#[tauri::command]
+fn apply_hotkeys(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, HotkeyState>,
+    screenshot: Option<String>,
+    record: Option<String>,
+    floating: Option<String>,
+) -> Result<(), String> {
+    let _ = app.global_shortcut().unregister_all();
+
+    let mut ss_lock = state.screenshot.lock().unwrap();
+    if let Some(s) = screenshot {
+        *ss_lock = s;
+    }
+    if let Ok(sc) = Shortcut::from_str(&ss_lock) {
+        let _ = app.global_shortcut().register(sc);
+    }
+
+    let mut rec_lock = state.record.lock().unwrap();
+    if let Some(r) = record {
+        *rec_lock = r;
+    }
+    if let Ok(sc) = Shortcut::from_str(&rec_lock) {
+        let _ = app.global_shortcut().register(sc);
+    }
+
+    let mut fl_lock = state.floating.lock().unwrap();
+    if let Some(f) = floating {
+        *fl_lock = f;
+    }
+    if let Ok(sc) = Shortcut::from_str(&fl_lock) {
+        let _ = app.global_shortcut().register(sc);
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
 fn copy_to_clipboard(base64_png: String) -> Result<(), String> {
     let base64_clean = if let Some(stripped) = base64_png.strip_prefix("data:image/png;base64,") {
         stripped
@@ -436,22 +512,70 @@ async fn send_discord_webhook(
     Ok(())
 }
 
+fn handle_take_screenshot(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        #[cfg(target_os = "windows")]
+        exclude_from_capture(&window);
+
+        let app_handle = app.clone();
+        tauri::async_runtime::spawn(async move {
+            match do_capture_screen() {
+                Ok(base64) => {
+                    let _ = app_handle.emit("trigger-capture", Some(base64));
+                }
+                Err(e) => {
+                    eprintln!("Failed to capture screen: {e}");
+                    let _ = app_handle.emit("trigger-capture", Option::<String>::None);
+                }
+            }
+        });
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .manage(HotkeyState::default())
         .plugin(tauri_plugin_opener::init())
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
-                .with_handler(|app, _shortcut, event| {
+                .with_handler(|app, shortcut, event| {
                     if event.state() == ShortcutState::Pressed {
-                        let app_handle = app.clone();
-                        tauri::async_runtime::spawn(async move {
-                            if let Some(window) = app_handle.get_webview_window("main") {
-                                let _ = enter_floating_bar_mode(window.clone());
-                                let _ = app_handle.emit("open-floating-bar", ());
-                                let _ = window.emit("open-floating-bar", ());
+                        if let Some(state) = app.try_state::<HotkeyState>() {
+                            let ss_str = state.screenshot.lock().unwrap().clone();
+                            let rec_str = state.record.lock().unwrap().clone();
+                            let fl_str = state.floating.lock().unwrap().clone();
+
+                            let matches_sc = |cfg_str: &str| -> bool {
+                                if let Ok(parsed) = Shortcut::from_str(cfg_str) {
+                                    parsed == *shortcut
+                                } else {
+                                    false
+                                }
+                            };
+
+                            if matches_sc(&ss_str) {
+                                handle_take_screenshot(app);
+                            } else if matches_sc(&rec_str) {
+                                let app_handle = app.clone();
+                                tauri::async_runtime::spawn(async move {
+                                    if let Some(window) = app_handle.get_webview_window("main") {
+                                        let _ = window.show();
+                                        let _ = window.set_focus();
+                                        let _ = app_handle.emit("trigger-record", ());
+                                    }
+                                });
+                            } else if matches_sc(&fl_str) {
+                                let app_handle = app.clone();
+                                tauri::async_runtime::spawn(async move {
+                                    if let Some(window) = app_handle.get_webview_window("main") {
+                                        let _ = enter_floating_bar_mode(window.clone());
+                                        let _ = app_handle.emit("open-floating-bar", ());
+                                        let _ = window.emit("open-floating-bar", ());
+                                    }
+                                });
                             }
-                        });
+                        }
                     }
                 })
                 .build(),
@@ -461,9 +585,22 @@ pub fn run() {
                 #[cfg(target_os = "windows")]
                 exclude_from_capture(&window);
             }
-            let shortcut = Shortcut::from_str("CommandOrControl+Shift+S")
-                .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
-            app.global_shortcut().register(shortcut)?;
+
+            if let Some(state) = app.try_state::<HotkeyState>() {
+                let ss = state.screenshot.lock().unwrap().clone();
+                let rec = state.record.lock().unwrap().clone();
+                let fl = state.floating.lock().unwrap().clone();
+
+                if let Ok(sc) = Shortcut::from_str(&ss) {
+                    let _ = app.global_shortcut().register(sc);
+                }
+                if let Ok(sc) = Shortcut::from_str(&rec) {
+                    let _ = app.global_shortcut().register(sc);
+                }
+                if let Ok(sc) = Shortcut::from_str(&fl) {
+                    let _ = app.global_shortcut().register(sc);
+                }
+            }
 
             // System Tray Menu items
             let show_floating_item = MenuItem::with_id(app, "show_floating", "Show Floating", true, None::<&str>)?;
@@ -488,26 +625,6 @@ pub fn run() {
                     &exit_item,
                 ],
             )?;
-
-            let handle_take_screenshot = |app: &tauri::AppHandle| {
-                if let Some(window) = app.get_webview_window("main") {
-                    #[cfg(target_os = "windows")]
-                    exclude_from_capture(&window);
-
-                    let app_handle = app.clone();
-                    tauri::async_runtime::spawn(async move {
-                        match do_capture_screen() {
-                            Ok(base64) => {
-                                let _ = app_handle.emit("trigger-capture", Some(base64));
-                            }
-                            Err(e) => {
-                                eprintln!("Failed to capture screen from tray: {e}");
-                                let _ = app_handle.emit("trigger-capture", Option::<String>::None);
-                            }
-                        }
-                    });
-                }
-            };
 
             let mut tray_builder = TrayIconBuilder::new()
                 .tooltip("ScreenCraft")
@@ -576,6 +693,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             capture_fullscreen,
             close_overlay,
+            set_window_always_on_top,
             copy_to_clipboard,
             prepare_for_recording,
             enter_recording_mode,
@@ -589,7 +707,10 @@ pub fn run() {
             save_file_with_dialog,
             send_slack_webhook,
             send_discord_webhook,
-            get_system_diagnostics
+            get_system_diagnostics,
+            disable_global_shortcuts,
+            register_global_shortcut,
+            apply_hotkeys
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import type { FlowNode } from "../../stores/flowStore";
 import { exportFlowToMarkdown } from "../../stores/flowStore";
+import { useSettingsStore } from "../../stores/settingsStore";
 import { saveFileWithDialog } from "../../services/fileSaveService";
 import type { SystemDiagnostics } from "../../types/diagnostics";
 import type {
@@ -110,7 +111,10 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
     const [activeTab, setActiveTab] = useState<"qaTicket" | "flowDoc">(
         "qaTicket",
     );
-    const [outputFormat, setOutputFormat] = useState<OutputFormat>("jira");
+    const [outputFormat, setOutputFormat] = useState<OutputFormat>(() => {
+        const fmt = useSettingsStore.getState().defaultTicketFormat;
+        return fmt === "markdown" ? "github" : "jira";
+    });
 
     // Form Fields
     const [title, setTitle] = useState("");
@@ -189,7 +193,9 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
     const [expectedResult, setExpectedResult] = useState("");
     const [actualResult, setActualResult] = useState("");
     const [stackTrace, setStackTrace] = useState("");
-    const [attachSpecs, setAttachSpecs] = useState(false);
+    const [attachSpecs, setAttachSpecs] = useState<boolean>(() =>
+        useSettingsStore.getState().attachSpecsWatermark,
+    );
 
     // Loading & Copy Feedback States
     const [isCopyingImage, setIsCopyingImage] = useState(false);
@@ -202,7 +208,10 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
     useEffect(() => {
         if (!isOpen) return;
 
-        setAttachSpecs(false);
+        const initialAttach = useSettingsStore.getState().attachSpecsWatermark;
+        setAttachSpecs(initialAttach);
+        const preferredFormat = useSettingsStore.getState().defaultTicketFormat;
+        setOutputFormat(preferredFormat === "markdown" ? "github" : "jira");
 
         // Detect stamps
         const stamps = annotations.filter(

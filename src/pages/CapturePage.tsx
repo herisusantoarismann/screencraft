@@ -27,7 +27,7 @@ import {
 } from "../services/diagnosticsService";
 import { saveFileWithDialog } from "../services/fileSaveService";
 import { ScreenCraftTemplate } from "../components/templates";
-import { AboutModal, SettingsModal } from "../components/organisms";
+import { AboutModal } from "../components/organisms";
 
 export const CapturePage: React.FC = () => {
     const {
@@ -154,10 +154,8 @@ export const CapturePage: React.FC = () => {
     const [isComparisonModalOpen, setIsComparisonModalOpen] =
         useState<boolean>(false);
     const [isAboutModalOpen, setIsAboutModalOpen] = useState<boolean>(false);
-    const [isSettingsModalOpen, setIsSettingsModalOpen] =
-        useState<boolean>(false);
     const [includeDiagnosticsStamp, setIncludeDiagnosticsStamp] =
-        useState<boolean>(false);
+        useState<boolean>(() => useSettingsStore.getState().attachSpecsWatermark);
     const [diagnostics, setDiagnostics] = useState<SystemDiagnostics | null>(
         null,
     );
@@ -251,6 +249,9 @@ export const CapturePage: React.FC = () => {
             setCropArea(null);
             resetStepCounter();
             resetFlow();
+            setIncludeDiagnosticsStamp(
+                useSettingsStore.getState().attachSpecsWatermark,
+            );
 
             // Automatically fetch environment & hardware diagnostics for QA inspection & watermark
             getSystemDiagnostics()
@@ -768,16 +769,15 @@ export const CapturePage: React.FC = () => {
         try {
             await invoke("copy_to_clipboard", { base64Png: dataUrl });
             setCopySuccess(true);
-            setTimeout(async () => {
-                await closeOverlay();
+            setTimeout(() => {
                 setCopySuccess(false);
-            }, 350);
+            }, 1500);
         } catch (err) {
             console.error("[CapturePage] Copy to clipboard failed:", err);
         } finally {
             setIsCopying(false);
         }
-    }, [getFinalExportDataUrl, closeOverlay]);
+    }, [getFinalExportDataUrl]);
 
     // Export: Copy Screenshot Image to OS Clipboard without closing overlay (for QA modal workflow)
     const handleCopyScreenshotOnly = useCallback(async (): Promise<boolean> => {
@@ -869,11 +869,9 @@ export const CapturePage: React.FC = () => {
         }
     }, [capturedImage]);
 
-    const handleCloseSettingsModal = useCallback(async () => {
-        setIsSettingsModalOpen(false);
-        if (!capturedImage) {
-            await invoke("enter_floating_bar_mode");
-        }
+    // Keep hasActiveScreenshot synchronized in settingsStore
+    useEffect(() => {
+        useSettingsStore.getState().setHasActiveScreenshot(Boolean(capturedImage));
     }, [capturedImage]);
 
     const capturedImageRef = useRef(capturedImage);
@@ -885,7 +883,7 @@ export const CapturePage: React.FC = () => {
     const startRecordingRef = useRef(startRecording);
     startRecordingRef.current = startRecording;
 
-    // System Tray Event Listeners: "trigger-record", "open-about", "open-settings", "tray-show-floating"
+    // System Tray Event Listeners: "trigger-record", "open-about", "tray-show-floating"
     useEffect(() => {
         let isCancelled = false;
         const unlistenFns: Array<() => void> = [];
@@ -916,24 +914,12 @@ export const CapturePage: React.FC = () => {
                     unlistenFns.push(uAbout);
                 }
 
-                const uSettings = await listen("open-settings", async () => {
-                    if (!capturedImageRef.current) {
-                        await invoke("enter_fullscreen_mode");
-                    }
-                    setIsSettingsModalOpen(true);
-                });
-                if (isCancelled) {
-                    uSettings();
-                } else {
-                    unlistenFns.push(uSettings);
-                }
-
                 const uTrayFloating = await listen("tray-show-floating", async () => {
                     if (capturedImageRef.current) {
                         await handleFullCancelCaptureRef.current();
                     }
                     setIsAboutModalOpen(false);
-                    setIsSettingsModalOpen(false);
+                    useSettingsStore.getState().setIsSettingsOpen(false);
                 });
                 if (isCancelled) {
                     uTrayFloating();
@@ -955,14 +941,13 @@ export const CapturePage: React.FC = () => {
 
     // Modal Escape key listener with capturing phase for instant precedence
     useEffect(() => {
-        if (!isAboutModalOpen && !isSettingsModalOpen) return;
+        if (!isAboutModalOpen) return;
 
         const handleModalEsc = (e: KeyboardEvent) => {
             if (e.key === "Escape") {
                 e.preventDefault();
                 e.stopImmediatePropagation();
                 if (isAboutModalOpen) void handleCloseAboutModal();
-                if (isSettingsModalOpen) void handleCloseSettingsModal();
             }
         };
 
@@ -971,12 +956,7 @@ export const CapturePage: React.FC = () => {
             window.removeEventListener("keydown", handleModalEsc, {
                 capture: true,
             });
-    }, [
-        isAboutModalOpen,
-        isSettingsModalOpen,
-        handleCloseAboutModal,
-        handleCloseSettingsModal,
-    ]);
+    }, [isAboutModalOpen, handleCloseAboutModal]);
 
     // Auto-copy to clipboard on capture if enabled in settings
     useEffect(() => {
@@ -1145,14 +1125,10 @@ export const CapturePage: React.FC = () => {
                 }}
             />
 
-            {/* System Tray & Preference Modals */}
+            {/* System Tray About Modal */}
             <AboutModal
                 isOpen={isAboutModalOpen}
                 onClose={() => void handleCloseAboutModal()}
-            />
-            <SettingsModal
-                isOpen={isSettingsModalOpen}
-                onClose={() => void handleCloseSettingsModal()}
             />
         </>
     );
