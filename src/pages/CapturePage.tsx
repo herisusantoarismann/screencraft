@@ -876,43 +876,70 @@ export const CapturePage: React.FC = () => {
         }
     }, [capturedImage]);
 
+    const capturedImageRef = useRef(capturedImage);
+    capturedImageRef.current = capturedImage;
+
+    const handleFullCancelCaptureRef = useRef(handleFullCancelCapture);
+    handleFullCancelCaptureRef.current = handleFullCancelCapture;
+
+    const startRecordingRef = useRef(startRecording);
+    startRecordingRef.current = startRecording;
+
     // System Tray Event Listeners: "trigger-record", "open-about", "open-settings", "tray-show-floating"
     useEffect(() => {
-        let unlistenRecord: (() => void) | undefined;
-        let unlistenAbout: (() => void) | undefined;
-        let unlistenSettings: (() => void) | undefined;
-        let unlistenTrayFloating: (() => void) | undefined;
+        let isCancelled = false;
+        const unlistenFns: Array<() => void> = [];
 
         const setupTrayListeners = async () => {
             try {
-                unlistenRecord = await listen("trigger-record", () => {
-                    if (capturedImage) {
-                        void handleFullCancelCapture();
+                const uRecord = await listen("trigger-record", async () => {
+                    if (capturedImageRef.current) {
+                        await handleFullCancelCaptureRef.current();
                     }
-                    void startRecording();
+                    void startRecordingRef.current();
                 });
+                if (isCancelled) {
+                    uRecord();
+                } else {
+                    unlistenFns.push(uRecord);
+                }
 
-                unlistenAbout = await listen("open-about", async () => {
-                    if (!capturedImage) {
+                const uAbout = await listen("open-about", async () => {
+                    if (!capturedImageRef.current) {
                         await invoke("enter_fullscreen_mode");
                     }
                     setIsAboutModalOpen(true);
                 });
+                if (isCancelled) {
+                    uAbout();
+                } else {
+                    unlistenFns.push(uAbout);
+                }
 
-                unlistenSettings = await listen("open-settings", async () => {
-                    if (!capturedImage) {
+                const uSettings = await listen("open-settings", async () => {
+                    if (!capturedImageRef.current) {
                         await invoke("enter_fullscreen_mode");
                     }
                     setIsSettingsModalOpen(true);
                 });
+                if (isCancelled) {
+                    uSettings();
+                } else {
+                    unlistenFns.push(uSettings);
+                }
 
-                unlistenTrayFloating = await listen("tray-show-floating", () => {
-                    if (capturedImage) {
-                        void handleFullCancelCapture();
+                const uTrayFloating = await listen("tray-show-floating", async () => {
+                    if (capturedImageRef.current) {
+                        await handleFullCancelCaptureRef.current();
                     }
                     setIsAboutModalOpen(false);
                     setIsSettingsModalOpen(false);
                 });
+                if (isCancelled) {
+                    uTrayFloating();
+                } else {
+                    unlistenFns.push(uTrayFloating);
+                }
             } catch (err) {
                 console.error("[CapturePage] Failed to register tray listeners:", err);
             }
@@ -921,12 +948,10 @@ export const CapturePage: React.FC = () => {
         void setupTrayListeners();
 
         return () => {
-            if (unlistenRecord) unlistenRecord();
-            if (unlistenAbout) unlistenAbout();
-            if (unlistenSettings) unlistenSettings();
-            if (unlistenTrayFloating) unlistenTrayFloating();
+            isCancelled = true;
+            unlistenFns.forEach((fn) => fn());
         };
-    }, [capturedImage, handleFullCancelCapture, startRecording]);
+    }, []);
 
     // Modal Escape key listener with capturing phase for instant precedence
     useEffect(() => {

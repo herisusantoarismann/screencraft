@@ -521,8 +521,6 @@ pub fn run() {
                                 let _ = enter_floating_bar_mode(window.clone());
                                 let _ = app.emit("open-floating-bar", ());
                                 let _ = app.emit("tray-show-floating", ());
-                                let _ = window.emit("open-floating-bar", ());
-                                let _ = window.emit("tray-show-floating", ());
                             }
                         }
                         "take_screenshot" => {
@@ -533,7 +531,6 @@ pub fn run() {
                                 let _ = window.show();
                                 let _ = window.set_focus();
                                 let _ = app.emit("trigger-record", ());
-                                let _ = window.emit("trigger-record", ());
                             }
                         }
                         "settings" => {
@@ -541,7 +538,6 @@ pub fn run() {
                                 let _ = window.show();
                                 let _ = window.set_focus();
                                 let _ = app.emit("open-settings", ());
-                                let _ = window.emit("open-settings", ());
                             }
                         }
                         "about" => {
@@ -549,7 +545,6 @@ pub fn run() {
                                 let _ = window.show();
                                 let _ = window.set_focus();
                                 let _ = app.emit("open-about", ());
-                                let _ = window.emit("open-about", ());
                             }
                         }
                         "exit" => {

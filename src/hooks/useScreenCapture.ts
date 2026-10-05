@@ -122,22 +122,24 @@ export const useScreenCapture = (): UseScreenCaptureReturn => {
 
   // Listen to Tauri events
   useEffect(() => {
-    let unlistenFloatingBar: UnlistenFn | undefined;
-    let unlistenTrigger: UnlistenFn | undefined;
+    let isCancelled = false;
+    const unlistenFns: Array<UnlistenFn> = [];
 
     const setupListener = async () => {
       try {
-        unlistenFloatingBar = await listen("open-floating-bar", () => {
+        const uFloating = await listen("open-floating-bar", () => {
           setCapturedImage(null);
           setError(null);
         });
+        if (isCancelled) { uFloating(); } else { unlistenFns.push(uFloating); }
 
-        const unlistenTrayFloating = await listen("tray-show-floating", () => {
+        const uTrayFloating = await listen("tray-show-floating", () => {
           setCapturedImage(null);
           setError(null);
         });
+        if (isCancelled) { uTrayFloating(); } else { unlistenFns.push(uTrayFloating); }
 
-        unlistenTrigger = await listen<string | null>("trigger-capture", async (event) => {
+        const uTrigger = await listen<string | null>("trigger-capture", async (event) => {
           if (event.payload) {
             setIsCapturing(true);
             setError(null);
@@ -158,10 +160,7 @@ export const useScreenCapture = (): UseScreenCaptureReturn => {
             await triggerScreenshot();
           }
         });
-
-        return () => {
-          if (unlistenTrayFloating) unlistenTrayFloating();
-        };
+        if (isCancelled) { uTrigger(); } else { unlistenFns.push(uTrigger); }
       } catch (err) {
         console.error("[useScreenCapture] Failed to register listeners:", err);
       }
@@ -170,10 +169,10 @@ export const useScreenCapture = (): UseScreenCaptureReturn => {
     void setupListener();
 
     return () => {
-      if (unlistenFloatingBar) unlistenFloatingBar();
-      if (unlistenTrigger) unlistenTrigger();
+      isCancelled = true;
+      unlistenFns.forEach((fn) => fn());
     };
-  }, []);
+  }, [triggerScreenshot]);
 
   // Handle Escape key when in standby floating bar mode (no image captured)
   useEffect(() => {

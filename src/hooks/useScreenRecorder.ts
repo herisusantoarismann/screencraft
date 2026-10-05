@@ -30,6 +30,7 @@ export const useScreenRecorder = () => {
   } = useRecordStore();
 
   const [isPreparingRecord, setIsPreparingRecord] = useState<boolean>(false);
+  const isStartingRef = useRef<boolean>(false);
   const [ripples, setRipples] = useState<ClickRipple[]>([]);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -65,6 +66,12 @@ export const useScreenRecorder = () => {
 
   // Start recording screen
   const startRecording = useCallback(async () => {
+    if (isStartingRef.current || isRecording) {
+      console.warn("[ScreenRecorder] Recording start already in progress or active, ignoring trigger.");
+      return;
+    }
+    isStartingRef.current = true;
+
     try {
       setIsPreparingRecord(true);
       chunksRef.current = [];
@@ -155,19 +162,20 @@ export const useScreenRecorder = () => {
 
       startTimeRef.current = performance.now();
       startStoreRecording();
-      setIsPreparingRecord(false);
 
       // Start duration timer (1s interval)
       timerRef.current = window.setInterval(() => {
         incrementDuration();
       }, 1000);
     } catch (err) {
-      // If user cancelled screen picker, make sure window returns to floating bar
-      await safeInvoke("enter_floating_bar_mode");
       console.warn("[ScreenRecorder] Screen capture cancelled or failed:", err);
       resetRecording();
+      // If user cancelled screen picker, make sure window returns to floating bar
+      await safeInvoke("enter_floating_bar_mode");
       // JEDA: Wait 150ms for window to settle back before un-hiding floating bar
       await new Promise((resolve) => setTimeout(resolve, 150));
+    } finally {
+      isStartingRef.current = false;
       setIsPreparingRecord(false);
     }
   }, [
