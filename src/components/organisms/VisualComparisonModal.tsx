@@ -15,6 +15,10 @@ import {
     Columns2,
     Zap,
     Move,
+    ZoomIn,
+    ZoomOut,
+    Link2,
+    Unlink2,
 } from "lucide-react";
 
 import { saveFileWithDialog } from "../../services/fileSaveService";
@@ -63,18 +67,23 @@ export const VisualComparisonModal: React.FC<VisualComparisonModalProps> = ({
     const [isFlickering, setIsFlickering] = useState<boolean>(false); // Auto blink 500ms
     const [flickerState, setFlickerState] = useState<boolean>(false);
 
-    // Alignment offsets (pan & scale)
+    // Alignment offsets (pan & scale) — all values are in LIVE IMAGE PIXELS
+    // (stage coordinates), independent of how large the viewport renders it.
     const [offsetX, setOffsetX] = useState<number>(0);
     const [offsetY, setOffsetY] = useState<number>(0);
-    const [scale, setScale] = useState<number>(100); // percentage 50 - 200
+    const [scaleX, setScaleX] = useState<number>(100); // mockup width scale %
+    const [scaleY, setScaleY] = useState<number>(100); // mockup height scale %
+    const [lockAspect, setLockAspect] = useState<boolean>(true);
 
     // Dragging slider or mockup alignment
     const [isDraggingSlider, setIsDraggingSlider] = useState<boolean>(false);
     const [isDraggingMockup, setIsDraggingMockup] = useState<boolean>(false);
-    const [dragStart, setDragStart] = useState<{ x: number; y: number }>({
-        x: 0,
-        y: 0,
-    });
+    const [dragStart, setDragStart] = useState<{
+        x: number;
+        y: number;
+        ox: number;
+        oy: number;
+    }>({ x: 0, y: 0, ox: 0, oy: 0 });
 
     // Status feedback
     const [isCopying, setIsCopying] = useState<boolean>(false);
@@ -83,6 +92,53 @@ export const VisualComparisonModal: React.FC<VisualComparisonModalProps> = ({
 
     const containerRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const viewportRef = useRef<HTMLDivElement>(null);
+    const [viewportSize, setViewportSize] = useState<{ w: number; h: number }>(
+        { w: 0, h: 0 },
+    );
+
+    const MIN_SCALE = 5;
+    const MAX_SCALE = 800;
+    const clampScale = (v: number) =>
+        Math.round(Math.min(MAX_SCALE, Math.max(MIN_SCALE, v)) * 100) / 100;
+
+    // Available stage dimensions in stage (live image) pixels
+    const baseWidth = liveDimensions?.width || 1920;
+    const stageWidth =
+        comparisonMode === "sideBySide" ? baseWidth * 2 : baseWidth;
+    const stageHeight = liveDimensions?.height || 1080;
+
+    // Display zoom: how much the full-resolution stage is shrunk to fit the viewport
+    const availableW = Math.max(100, viewportSize.w - 32);
+    const availableH = Math.max(100, viewportSize.h - 32);
+    const viewScale =
+        viewportSize.w > 0 && viewportSize.h > 0
+            ? Math.min(1, availableW / stageWidth, availableH / stageHeight)
+            : 1;
+
+    // Mockup rendered size in stage (live image) pixels
+    const mockupRenderWidth = mockupDimensions
+        ? (mockupDimensions.width * scaleX) / 100
+        : 0;
+    const mockupRenderHeight = mockupDimensions
+        ? (mockupDimensions.height * scaleY) / 100
+        : 0;
+
+    const displayWidth = Math.max(1, Math.round(stageWidth * viewScale));
+    const displayHeight = Math.max(1, Math.round(stageHeight * viewScale));
+
+    // Measure available viewport area so the stage can be fitted into it
+    useEffect(() => {
+        if (!isOpen) return;
+        const el = viewportRef.current;
+        if (!el) return;
+        const ro = new ResizeObserver((entries) => {
+            const rect = entries[0]?.contentRect;
+            if (rect) setViewportSize({ w: rect.width, h: rect.height });
+        });
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, [isOpen]);
 
     // 1. Initialize live screenshot image
     useEffect(() => {
@@ -224,14 +280,21 @@ export const VisualComparisonModal: React.FC<VisualComparisonModalProps> = ({
     // Mouse drag handler for Slider & Mockup repositioning
     const handleMouseDownOnSlider = (e: React.MouseEvent) => {
         e.preventDefault();
+        e.stopPropagation();
         setIsDraggingSlider(true);
     };
 
     const handleMouseDownOnViewport = (e: React.MouseEvent) => {
+        if (comparisonMode === "sideBySide") return;
         if (e.button === 0 && (e.altKey || comparisonMode !== "slider")) {
             e.preventDefault();
             setIsDraggingMockup(true);
-            setDragStart({ x: e.clientX - offsetX, y: e.clientY - offsetY });
+            setDragStart({
+                x: e.clientX,
+                y: e.clientY,
+                ox: offsetX,
+                oy: offsetY,
+            });
         }
     };
 
@@ -243,11 +306,17 @@ export const VisualComparisonModal: React.FC<VisualComparisonModalProps> = ({
                 const pct = Math.max(0, Math.min(100, (x / rect.width) * 100));
                 setSliderPosition(Math.round(pct * 10) / 10);
             } else if (isDraggingMockup) {
-                setOffsetX(e.clientX - dragStart.x);
-                setOffsetY(e.clientY - dragStart.y);
+                // Convert on-screen drag distance into live-image pixels
+                const factor = viewScale > 0 ? viewScale : 1;
+                setOffsetX(
+                    Math.round(dragStart.ox + (e.clientX - dragStart.x) / factor),
+                );
+                setOffsetY(
+                    Math.round(dragStart.oy + (e.clientY - dragStart.y) / factor),
+                );
             }
         },
-        [isDraggingSlider, isDraggingMockup, dragStart],
+        [isDraggingSlider, isDraggingMockup, dragStart, viewScale],
     );
 
     const handleMouseUp = useCallback(() => {
@@ -255,26 +324,158 @@ export const VisualComparisonModal: React.FC<VisualComparisonModalProps> = ({
         setIsDraggingMockup(false);
     }, []);
 
-    // Fit mockup width to live width
-    const handleAutoFitWidth = () => {
+    const flashStatus = (msg: string, ms = 2000) => {
+        setStatusMessage(msg);
+        setTimeout(() => setStatusMessage(null), ms);
+    };
+
+    // --- Mockup sizing helpers -------------------------------------------
+    const applyUniformScale = (value: number) => {
+        const v = clampScale(value);
+        setScaleX(v);
+        setScaleY(v);
+    };
+
+    const handleScaleXChange = (value: number) => {
+        if (!Number.isFinite(value)) return;
+        const v = clampScale(value);
+        setScaleX(v);
+        if (lockAspect) setScaleY(v);
+    };
+
+    const handleScaleYChange = (value: number) => {
+        if (!Number.isFinite(value)) return;
+        const v = clampScale(value);
+        setScaleY(v);
+        if (lockAspect) setScaleX(v);
+    };
+
+    const handleToggleLockAspect = () => {
+        const next = !lockAspect;
+        setLockAspect(next);
+        if (next) setScaleY(scaleX); // re-sync height to width when locking
+    };
+
+    const handleZoomStep = (direction: 1 | -1) => {
+        const factor = direction > 0 ? 1.05 : 1 / 1.05;
+        setScaleX((prev) => clampScale(prev * factor));
+        setScaleY((prev) => clampScale(prev * factor));
+    };
+
+    // Fit mockup width to live width (keeps aspect ratio)
+    const handleAutoFitWidth = (silent = false) => {
         if (!liveDimensions || !mockupDimensions) return;
-        const targetScale = Math.round(
+        const targetScale = clampScale(
             (liveDimensions.width / mockupDimensions.width) * 100,
         );
-        setScale(targetScale);
+        setLockAspect(true);
+        applyUniformScale(targetScale);
         setOffsetX(0);
         setOffsetY(0);
-        setStatusMessage(`Skala disesuaikan: ${targetScale}%`);
-        setTimeout(() => setStatusMessage(null), 2000);
+        if (!silent) flashStatus(`Fit to width: ${targetScale}%`);
+        return targetScale;
+    };
+
+    // Fit mockup height to live height (keeps aspect ratio)
+    const handleAutoFitHeight = () => {
+        if (!liveDimensions || !mockupDimensions) return;
+        const targetScale = clampScale(
+            (liveDimensions.height / mockupDimensions.height) * 100,
+        );
+        setLockAspect(true);
+        applyUniformScale(targetScale);
+        setOffsetX(0);
+        setOffsetY(0);
+        flashStatus(`Fit to height: ${targetScale}%`);
+    };
+
+    // Stretch mockup to exactly match live width AND height (breaks aspect ratio)
+    const handleStretchToFit = () => {
+        if (!liveDimensions || !mockupDimensions) return;
+        const sx = clampScale(
+            (liveDimensions.width / mockupDimensions.width) * 100,
+        );
+        const sy = clampScale(
+            (liveDimensions.height / mockupDimensions.height) * 100,
+        );
+        setLockAspect(false);
+        setScaleX(sx);
+        setScaleY(sy);
+        setOffsetX(0);
+        setOffsetY(0);
+        flashStatus(`Stretched to ${liveDimensions.width}×${liveDimensions.height}px`);
+    };
+
+    // Show mockup at its original pixel size
+    const handleActualSize = () => {
+        setLockAspect(true);
+        applyUniformScale(100);
+        flashStatus("Mockup at actual size (1:1)");
     };
 
     const handleResetAlignment = () => {
-        setOffsetX(0);
-        setOffsetY(0);
-        setScale(100);
         setSliderPosition(50);
         setOverlayOpacity(50);
+        if (liveDimensions && mockupDimensions) {
+            handleAutoFitWidth(true);
+        } else {
+            setOffsetX(0);
+            setOffsetY(0);
+            setLockAspect(true);
+            applyUniformScale(100);
+        }
     };
+
+    // Auto-fit the mockup width to the live screenshot whenever a new mockup is
+    // loaded, so both images start at the same visual size.
+    useEffect(() => {
+        if (!mockupDimensions || !liveDimensions) return;
+        const s = handleAutoFitWidth(true);
+        if (s !== undefined && Math.abs(s - 100) > 0.01) {
+            flashStatus(`Mockup auto-scaled to ${s}% to match live width`, 3000);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [mockupDimensions, liveDimensions]);
+
+    // Ctrl + Mouse Wheel: scale mockup anchored at cursor position
+    const wheelStateRef = useRef({
+        scaleX,
+        scaleY,
+        offsetX,
+        offsetY,
+        viewScale,
+    });
+    wheelStateRef.current = { scaleX, scaleY, offsetX, offsetY, viewScale };
+
+    useEffect(() => {
+        const el = containerRef.current;
+        if (!el || !mockupImage || comparisonMode === "sideBySide") return;
+
+        const handleWheel = (e: WheelEvent) => {
+            if (!e.ctrlKey) return;
+            e.preventDefault();
+            const st = wheelStateRef.current;
+            const rect = el.getBoundingClientRect();
+            const vs = st.viewScale > 0 ? st.viewScale : 1;
+            // Cursor position in stage (live image) pixels
+            const px = (e.clientX - rect.left) / vs;
+            const py = (e.clientY - rect.top) / vs;
+            const factor = e.deltaY < 0 ? 1.05 : 1 / 1.05;
+            const nsx = clampScale(st.scaleX * factor);
+            const nsy = clampScale(st.scaleY * factor);
+            // Keep the mockup point under the cursor fixed while scaling
+            const nox = px - ((px - st.offsetX) * nsx) / st.scaleX;
+            const noy = py - ((py - st.offsetY) * nsy) / st.scaleY;
+            setScaleX(nsx);
+            setScaleY(nsy);
+            setOffsetX(Math.round(nox));
+            setOffsetY(Math.round(noy));
+        };
+
+        el.addEventListener("wheel", handleWheel, { passive: false });
+        return () => el.removeEventListener("wheel", handleWheel);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [mockupImage, comparisonMode]);
 
     // Generate composite Canvas snapshot of the comparison
     const generateComparisonCanvas =
@@ -305,8 +506,13 @@ export const VisualComparisonModal: React.FC<VisualComparisonModalProps> = ({
                 imgMockup.src = mockupDataUrl;
             });
 
-            const mockupScaledWidth = (imgMockup.naturalWidth * scale) / 100;
-            const mockupScaledHeight = (imgMockup.naturalHeight * scale) / 100;
+            const mockupScaledWidth = (imgMockup.naturalWidth * scaleX) / 100;
+            const mockupScaledHeight =
+                (imgMockup.naturalHeight * scaleY) / 100;
+
+            // Neutral background for areas not covered by the mockup
+            ctx.fillStyle = "#0a0a0a";
+            ctx.fillRect(0, 0, width, height);
 
             if (comparisonMode === "slider") {
                 const splitX = (width * sliderPosition) / 100;
@@ -389,10 +595,35 @@ export const VisualComparisonModal: React.FC<VisualComparisonModalProps> = ({
                     mockupScaledHeight,
                 );
             } else if (comparisonMode === "sideBySide") {
-                // Expand canvas width for side-by-side
+                // Expand canvas width for side-by-side (resizing clears the canvas)
                 canvas.width = width * 2;
-                ctx.drawImage(imgMockup, 0, 0, width, height);
-                ctx.drawImage(imgLive, width, 0, width, height);
+                ctx.fillStyle = "#0a0a0a";
+                ctx.fillRect(0, 0, canvas.width, height);
+
+                // Draw each image "contained" in its half, keeping aspect ratio
+                const drawContain = (
+                    img: HTMLImageElement,
+                    dx: number,
+                    dy: number,
+                    dw: number,
+                    dh: number,
+                ) => {
+                    const r = Math.min(
+                        dw / img.naturalWidth,
+                        dh / img.naturalHeight,
+                    );
+                    const w = img.naturalWidth * r;
+                    const h = img.naturalHeight * r;
+                    ctx.drawImage(
+                        img,
+                        dx + (dw - w) / 2,
+                        dy + (dh - h) / 2,
+                        w,
+                        h,
+                    );
+                };
+                drawContain(imgMockup, 0, 0, width, height);
+                drawContain(imgLive, width, 0, width, height);
             }
 
             return canvas;
@@ -410,9 +641,7 @@ export const VisualComparisonModal: React.FC<VisualComparisonModalProps> = ({
                 await navigator.clipboard.write([
                     new ClipboardItem({ "image/png": blob }),
                 ]);
-                setStatusMessage(
-                    "Comparison image copied to clipboard! 📋",
-                );
+                setStatusMessage("Comparison image copied to clipboard! 📋");
                 setIsCopying(false);
                 setTimeout(() => setStatusMessage(null), 3000);
             }, "image/png");
@@ -446,7 +675,9 @@ export const VisualComparisonModal: React.FC<VisualComparisonModalProps> = ({
 
             if (res.canceled) return;
 
-            setStatusMessage(`Comparison image (${res.fileName || targetName}) saved successfully! 🎉`);
+            setStatusMessage(
+                `Comparison image (${res.fileName || targetName}) saved successfully! 🎉`,
+            );
         } catch (err) {
             console.error("Failed to download diff image:", err);
             setStatusMessage("Failed to save comparison image.");
@@ -484,9 +715,6 @@ export const VisualComparisonModal: React.FC<VisualComparisonModalProps> = ({
                                 </span>
                                 <span className="text-[10px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded-md bg-pink-950/80 text-pink-300 border border-pink-500/30">
                                     UI/UX Slicing QA
-                                </span>
-                                <span className="font-bold text-sm text-neutral-100">
-                                    (BETA)
                                 </span>
                             </div>
                             <p className="text-[11px] text-neutral-400">
@@ -653,75 +881,181 @@ export const VisualComparisonModal: React.FC<VisualComparisonModalProps> = ({
                                 </div>
                             )}
 
-                            {/* Calibration / Alignment Controls */}
-                            <div className="flex items-center gap-1.5 bg-neutral-950/60 px-2.5 py-1 rounded-xl border border-neutral-800">
-                                <span className="text-[11px] text-neutral-400 flex items-center gap-1">
-                                    <Move className="w-3 h-3 text-neutral-400" />
-                                    <span className="font-mono text-neutral-300">
-                                        X:{offsetX} Y:{offsetY}
-                                    </span>
-                                </span>
-
-                                <div className="flex items-center gap-0.5 ml-1">
+                            {/* Sizing & Alignment Calibration Bar */}
+                            <div className="flex flex-wrap items-center gap-2 bg-neutral-950/80 px-2.5 py-1.5 rounded-xl border border-neutral-800 text-xs">
+                                {/* Size Presets */}
+                                <div className="flex items-center bg-neutral-900 rounded-lg p-0.5 border border-neutral-800/80">
                                     <button
                                         type="button"
-                                        onClick={() =>
-                                            setOffsetX((prev) => prev - 1)
-                                        }
-                                        className="px-1.5 py-0.5 bg-neutral-800 hover:bg-neutral-700 rounded text-[10px] font-mono cursor-pointer"
-                                        title="Nudge Left 1px (ArrowLeft)"
+                                        onClick={() => handleAutoFitWidth(false)}
+                                        className="px-2 py-0.5 rounded text-[11px] font-medium text-neutral-300 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer"
+                                        title="Fit Mockup Width to Live Screenshot (Keep Aspect)"
                                     >
-                                        ◀
+                                        Fit W
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={() =>
-                                            setOffsetX((prev) => prev + 1)
-                                        }
-                                        className="px-1.5 py-0.5 bg-neutral-800 hover:bg-neutral-700 rounded text-[10px] font-mono cursor-pointer"
-                                        title="Nudge Right 1px (ArrowRight)"
+                                        onClick={handleAutoFitHeight}
+                                        className="px-2 py-0.5 rounded text-[11px] font-medium text-neutral-300 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer"
+                                        title="Fit Mockup Height to Live Screenshot (Keep Aspect)"
                                     >
-                                        ▶
+                                        Fit H
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={() =>
-                                            setOffsetY((prev) => prev - 1)
-                                        }
-                                        className="px-1.5 py-0.5 bg-neutral-800 hover:bg-neutral-700 rounded text-[10px] font-mono cursor-pointer"
-                                        title="Nudge Up 1px (ArrowUp)"
+                                        onClick={handleActualSize}
+                                        className="px-2 py-0.5 rounded text-[11px] font-medium text-neutral-300 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer"
+                                        title="Reset Mockup to Original Size (1:1 / 100%)"
                                     >
-                                        ▲
+                                        1:1
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={() =>
-                                            setOffsetY((prev) => prev + 1)
-                                        }
-                                        className="px-1.5 py-0.5 bg-neutral-800 hover:bg-neutral-700 rounded text-[10px] font-mono cursor-pointer"
-                                        title="Nudge Down 1px (ArrowDown)"
+                                        onClick={handleStretchToFit}
+                                        className="px-2 py-0.5 rounded text-[11px] font-medium text-neutral-300 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer"
+                                        title="Stretch Mockup to Match Live Width & Height"
                                     >
-                                        ▼
+                                        Stretch
                                     </button>
                                 </div>
 
-                                <button
-                                    type="button"
-                                    onClick={handleAutoFitWidth}
-                                    className="ml-1 px-2 py-0.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded text-[11px] transition-colors cursor-pointer"
-                                    title="Fit mockup width to screenshot width"
-                                >
-                                    Fit Width
-                                </button>
+                                <div className="h-4 w-px bg-neutral-800 hidden sm:block" />
 
-                                <button
-                                    type="button"
-                                    onClick={handleResetAlignment}
-                                    className="p-1 hover:bg-neutral-800 text-neutral-400 hover:text-white rounded transition-colors cursor-pointer"
-                                    title="Reset Position & Scale"
-                                >
-                                    <RotateCcw className="w-3.5 h-3.5" />
-                                </button>
+                                {/* Scale / Zoom Controls */}
+                                <div className="flex items-center gap-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleZoomStep(-1)}
+                                        className="p-1 hover:bg-neutral-800 rounded text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                                        title="Zoom Out Mockup (-5%)"
+                                    >
+                                        <ZoomOut className="w-3.5 h-3.5" />
+                                    </button>
+
+                                    {/* Numeric Scale Input */}
+                                    <div className="flex items-center gap-1 bg-neutral-900 px-1.5 py-0.5 rounded-lg border border-neutral-800">
+                                        <input
+                                            type="number"
+                                            min={MIN_SCALE}
+                                            max={MAX_SCALE}
+                                            step={1}
+                                            value={Math.round(scaleX)}
+                                            onChange={(e) => {
+                                                const val = parseFloat(e.target.value);
+                                                if (!isNaN(val)) handleScaleXChange(val);
+                                            }}
+                                            className="w-10 bg-transparent text-center font-mono text-[11px] text-pink-300 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                            title="Mockup Width Scale %"
+                                        />
+                                        <span className="text-[10px] text-neutral-500 font-mono">%</span>
+
+                                        {!lockAspect && (
+                                            <>
+                                                <span className="text-[10px] text-neutral-600 font-mono">×</span>
+                                                <input
+                                                    type="number"
+                                                    min={MIN_SCALE}
+                                                    max={MAX_SCALE}
+                                                    step={1}
+                                                    value={Math.round(scaleY)}
+                                                    onChange={(e) => {
+                                                        const val = parseFloat(e.target.value);
+                                                        if (!isNaN(val)) handleScaleYChange(val);
+                                                    }}
+                                                    className="w-10 bg-transparent text-center font-mono text-[11px] text-pink-300 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                    title="Mockup Height Scale %"
+                                                />
+                                                <span className="text-[10px] text-neutral-500 font-mono">%</span>
+                                            </>
+                                        )}
+
+                                        <button
+                                            type="button"
+                                            onClick={handleToggleLockAspect}
+                                            className={`p-0.5 rounded transition-colors cursor-pointer ${
+                                                lockAspect
+                                                    ? "text-pink-400 hover:text-pink-300"
+                                                    : "text-neutral-500 hover:text-neutral-300"
+                                            }`}
+                                            title={
+                                                lockAspect
+                                                    ? "Aspect Ratio Locked (click to unlock)"
+                                                    : "Aspect Ratio Unlocked (click to lock)"
+                                            }
+                                        >
+                                            {lockAspect ? (
+                                                <Link2 className="w-3 h-3" />
+                                            ) : (
+                                                <Unlink2 className="w-3 h-3" />
+                                            )}
+                                        </button>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => handleZoomStep(1)}
+                                        className="p-1 hover:bg-neutral-800 rounded text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                                        title="Zoom In Mockup (+5%)"
+                                    >
+                                        <ZoomIn className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+
+                                <div className="h-4 w-px bg-neutral-800 hidden sm:block" />
+
+                                {/* Position & Nudge */}
+                                <div className="flex items-center gap-1">
+                                    <span className="text-[11px] text-neutral-400 flex items-center gap-1 font-mono">
+                                        <Move className="w-3 h-3 text-neutral-400" />
+                                        <span className="text-neutral-300">
+                                            X:{offsetX} Y:{offsetY}
+                                        </span>
+                                    </span>
+
+                                    <div className="flex items-center gap-0.5">
+                                        <button
+                                            type="button"
+                                            onClick={() => setOffsetX((prev) => prev - 1)}
+                                            className="px-1.5 py-0.5 bg-neutral-900 hover:bg-neutral-800 rounded text-[10px] font-mono cursor-pointer text-neutral-300 hover:text-white border border-neutral-800"
+                                            title="Nudge Left 1px (ArrowLeft, Shift for 10px)"
+                                        >
+                                            ◀
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setOffsetX((prev) => prev + 1)}
+                                            className="px-1.5 py-0.5 bg-neutral-900 hover:bg-neutral-800 rounded text-[10px] font-mono cursor-pointer text-neutral-300 hover:text-white border border-neutral-800"
+                                            title="Nudge Right 1px (ArrowRight, Shift for 10px)"
+                                        >
+                                            ▶
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setOffsetY((prev) => prev - 1)}
+                                            className="px-1.5 py-0.5 bg-neutral-900 hover:bg-neutral-800 rounded text-[10px] font-mono cursor-pointer text-neutral-300 hover:text-white border border-neutral-800"
+                                            title="Nudge Up 1px (ArrowUp, Shift for 10px)"
+                                        >
+                                            ▲
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setOffsetY((prev) => prev + 1)}
+                                            className="px-1.5 py-0.5 bg-neutral-900 hover:bg-neutral-800 rounded text-[10px] font-mono cursor-pointer text-neutral-300 hover:text-white border border-neutral-800"
+                                            title="Nudge Down 1px (ArrowDown, Shift for 10px)"
+                                        >
+                                            ▼
+                                        </button>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={handleResetAlignment}
+                                        className="p-1 hover:bg-neutral-800 text-neutral-400 hover:text-white rounded transition-colors cursor-pointer ml-0.5"
+                                        title="Reset Position & Fit Width"
+                                    >
+                                        <RotateCcw className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -751,7 +1085,10 @@ export const VisualComparisonModal: React.FC<VisualComparisonModalProps> = ({
                 </div>
 
                 {/* 3. Main Comparison Viewport / Dropzone */}
-                <div className="flex-1 bg-neutral-950 p-4 overflow-auto flex items-center justify-center relative select-none">
+                <div
+                    ref={viewportRef}
+                    className="flex-1 bg-neutral-950 p-4 overflow-auto flex items-center justify-center relative select-none"
+                >
                     {!mockupImage ? (
                         /* Upload & Paste Dropzone State */
                         <div
@@ -796,173 +1133,265 @@ export const VisualComparisonModal: React.FC<VisualComparisonModalProps> = ({
                     ) : (
                         /* Active Comparison Canvas Container */
                         <div
-                            ref={containerRef}
-                            onMouseDown={handleMouseDownOnViewport}
-                            className="relative max-w-full max-h-full overflow-hidden shadow-2xl rounded-xl border border-neutral-800 cursor-crosshair"
                             style={{
-                                width: liveDimensions
-                                    ? `${liveDimensions.width}px`
-                                    : "100%",
-                                height: liveDimensions
-                                    ? `${liveDimensions.height}px`
-                                    : "auto",
+                                width: `${displayWidth}px`,
+                                height: `${displayHeight}px`,
                             }}
+                            className="relative shrink-0 shadow-2xl rounded-xl overflow-hidden border border-neutral-800"
                         >
-                            {/* Layer A: Base Live Screenshot */}
-                            {liveDataUrl && (
-                                <img
-                                    src={liveDataUrl}
-                                    alt="Live Screenshot"
-                                    className="w-full h-full object-contain pointer-events-none select-none block"
-                                    draggable={false}
-                                />
-                            )}
-
-                            {/* Layer B: Mockup Image with comparison modes */}
-                            {mockupDataUrl && (
-                                <>
-                                    {/* Mode 1: Diff Slider */}
-                                    {comparisonMode === "slider" && (
-                                        <div
-                                            className="absolute inset-0 overflow-hidden pointer-events-none select-none"
+                            <div
+                                ref={containerRef}
+                                onMouseDown={handleMouseDownOnViewport}
+                                className="relative cursor-crosshair select-none origin-top-left"
+                                style={{
+                                    width: `${stageWidth}px`,
+                                    height: `${stageHeight}px`,
+                                    transform: `scale(${viewScale})`,
+                                    transformOrigin: "top left",
+                                }}
+                            >
+                                {/* Layer A: Base Live Screenshot or Mockup if swapped */}
+                                {!isSwapped || comparisonMode !== "slider" ? (
+                                    liveDataUrl && (
+                                        <img
+                                            src={liveDataUrl}
+                                            alt="Live Screenshot"
+                                            className="w-full h-full block pointer-events-none select-none"
                                             style={{
-                                                width: `${sliderPosition}%`,
-                                                borderRight:
-                                                    "2px solid #ec4899",
+                                                width: `${stageWidth}px`,
+                                                height: `${stageHeight}px`,
+                                                display: "block",
+                                            }}
+                                            draggable={false}
+                                        />
+                                    )
+                                ) : (
+                                    /* When swapped in slider mode, base layer is Mockup */
+                                    mockupDataUrl && (
+                                        <div
+                                            style={{
+                                                position: "absolute",
+                                                top: 0,
+                                                left: 0,
+                                                width: `${mockupDimensions?.width || stageWidth}px`,
+                                                height: `${mockupDimensions?.height || stageHeight}px`,
+                                                transform: `translate(${offsetX}px, ${offsetY}px) scale(${scaleX / 100}, ${scaleY / 100})`,
+                                                transformOrigin: "top left",
                                             }}
                                         >
-                                            <div
+                                            <img
+                                                src={mockupDataUrl}
+                                                alt="Figma Mockup"
+                                                className="w-full h-full block pointer-events-none select-none"
                                                 style={{
-                                                    width: liveDimensions
-                                                        ? `${liveDimensions.width}px`
-                                                        : "100%",
-                                                    height: liveDimensions
-                                                        ? `${liveDimensions.height}px`
-                                                        : "100%",
-                                                    transform: `translate(${offsetX}px, ${offsetY}px) scale(${scale / 100})`,
-                                                    transformOrigin: "top left",
+                                                    width: "100%",
+                                                    height: "100%",
+                                                    display: "block",
+                                                }}
+                                                draggable={false}
+                                            />
+                                        </div>
+                                    )
+                                )}
+
+                                {/* Layer B: Mockup Image with comparison modes */}
+                                {mockupDataUrl && (
+                                    <>
+                                        {/* Mode 1: Diff Slider */}
+                                        {comparisonMode === "slider" && (
+                                            <div
+                                                className="absolute inset-0 overflow-hidden pointer-events-none select-none"
+                                                style={{
+                                                    width: `${sliderPosition}%`,
+                                                    borderRight:
+                                                        "2px solid #ec4899",
                                                 }}
                                             >
-                                                <img
-                                                    src={
-                                                        !isSwapped
-                                                            ? mockupDataUrl
-                                                            : liveDataUrl || ""
-                                                    }
-                                                    alt="Comparison Layer"
-                                                    className="w-full h-full object-contain pointer-events-none select-none block"
-                                                    draggable={false}
-                                                />
+                                                {!isSwapped ? (
+                                                    /* Left side shows Mockup */
+                                                    <div
+                                                        style={{
+                                                            position: "absolute",
+                                                            top: 0,
+                                                            left: 0,
+                                                            width: `${mockupDimensions?.width || stageWidth}px`,
+                                                            height: `${mockupDimensions?.height || stageHeight}px`,
+                                                            transform: `translate(${offsetX}px, ${offsetY}px) scale(${scaleX / 100}, ${scaleY / 100})`,
+                                                            transformOrigin: "top left",
+                                                        }}
+                                                    >
+                                                        <img
+                                                            src={mockupDataUrl}
+                                                            alt="Figma Mockup"
+                                                            className="w-full h-full block pointer-events-none select-none"
+                                                            style={{
+                                                                width: "100%",
+                                                                height: "100%",
+                                                                display: "block",
+                                                            }}
+                                                            draggable={false}
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    /* Left side shows Live */
+                                                    <div
+                                                        style={{
+                                                            position: "absolute",
+                                                            top: 0,
+                                                            left: 0,
+                                                            width: `${stageWidth}px`,
+                                                            height: `${stageHeight}px`,
+                                                        }}
+                                                    >
+                                                        <img
+                                                            src={liveDataUrl || ""}
+                                                            alt="Live Screenshot"
+                                                            className="w-full h-full block pointer-events-none select-none"
+                                                            style={{
+                                                                width: "100%",
+                                                                height: "100%",
+                                                                display: "block",
+                                                            }}
+                                                            draggable={false}
+                                                        />
+                                                    </div>
+                                                )}
                                             </div>
-                                        </div>
-                                    )}
+                                        )}
 
-                                    {/* Mode 2: Overlay Opacity */}
-                                    {comparisonMode === "overlay" && (
-                                        <div
-                                            className="absolute inset-0 pointer-events-none select-none"
-                                            style={{
-                                                opacity: isFlickering
-                                                    ? flickerState
-                                                        ? 1
-                                                        : 0
-                                                    : overlayOpacity / 100,
-                                                transform: `translate(${offsetX}px, ${offsetY}px) scale(${scale / 100})`,
-                                                transformOrigin: "top left",
-                                                transition: isFlickering
-                                                    ? "opacity 0.05s ease"
-                                                    : "none",
-                                            }}
-                                        >
-                                            <img
-                                                src={mockupDataUrl}
-                                                alt="Figma Mockup Overlay"
-                                                className="w-full h-full object-contain pointer-events-none select-none block"
-                                                draggable={false}
-                                            />
-                                        </div>
-                                    )}
-
-                                    {/* Mode 3: Pixel Difference Blend Mode */}
-                                    {comparisonMode === "difference" && (
-                                        <div
-                                            className="absolute inset-0 pointer-events-none select-none"
-                                            style={{
-                                                mixBlendMode: "difference",
-                                                transform: `translate(${offsetX}px, ${offsetY}px) scale(${scale / 100})`,
-                                                transformOrigin: "top left",
-                                            }}
-                                        >
-                                            <img
-                                                src={mockupDataUrl}
-                                                alt="Pixel Difference Layer"
-                                                className="w-full h-full object-contain pointer-events-none select-none block"
-                                                draggable={false}
-                                            />
-                                        </div>
-                                    )}
-
-                                    {/* Mode 4: Side-by-Side Dual View */}
-                                    {comparisonMode === "sideBySide" && (
-                                        <div className="absolute inset-0 grid grid-cols-2 pointer-events-none select-none bg-neutral-950">
-                                            <div className="relative border-r border-neutral-800 p-2 overflow-hidden flex items-center justify-center">
-                                                <span className="absolute top-2 left-2 z-10 px-2 py-0.5 bg-pink-950/80 text-pink-300 border border-pink-500/40 rounded text-[10px] font-bold">
-                                                    📐 Figma Mockup
-                                                </span>
-                                                <img
-                                                    src={mockupDataUrl}
-                                                    alt="Figma Mockup"
-                                                    className="w-full h-full object-contain pointer-events-none"
-                                                    draggable={false}
-                                                />
+                                        {/* Mode 2: Overlay Opacity */}
+                                        {comparisonMode === "overlay" && (
+                                            <div
+                                                className="absolute inset-0 pointer-events-none select-none overflow-hidden"
+                                            >
+                                                <div
+                                                    style={{
+                                                        position: "absolute",
+                                                        top: 0,
+                                                        left: 0,
+                                                        width: `${mockupDimensions?.width || stageWidth}px`,
+                                                        height: `${mockupDimensions?.height || stageHeight}px`,
+                                                        opacity: isFlickering
+                                                            ? flickerState
+                                                                ? 1
+                                                                : 0
+                                                            : overlayOpacity / 100,
+                                                        transform: `translate(${offsetX}px, ${offsetY}px) scale(${scaleX / 100}, ${scaleY / 100})`,
+                                                        transformOrigin: "top left",
+                                                        transition: isFlickering
+                                                            ? "opacity 0.05s ease"
+                                                            : "none",
+                                                    }}
+                                                >
+                                                    <img
+                                                        src={mockupDataUrl}
+                                                        alt="Figma Mockup Overlay"
+                                                        className="w-full h-full block pointer-events-none select-none"
+                                                        style={{
+                                                            width: "100%",
+                                                            height: "100%",
+                                                            display: "block",
+                                                        }}
+                                                        draggable={false}
+                                                    />
+                                                </div>
                                             </div>
-                                            <div className="relative p-2 overflow-hidden flex items-center justify-center">
-                                                <span className="absolute top-2 left-2 z-10 px-2 py-0.5 bg-blue-950/80 text-blue-300 border border-blue-500/40 rounded text-[10px] font-bold">
-                                                    🌐 Live Web Slicing
-                                                </span>
-                                                <img
-                                                    src={liveDataUrl || ""}
-                                                    alt="Live Screenshot"
-                                                    className="w-full h-full object-contain pointer-events-none"
-                                                    draggable={false}
-                                                />
+                                        )}
+
+                                        {/* Mode 3: Pixel Difference Blend Mode */}
+                                        {comparisonMode === "difference" && (
+                                            <div
+                                                className="absolute inset-0 pointer-events-none select-none overflow-hidden"
+                                            >
+                                                <div
+                                                    style={{
+                                                        position: "absolute",
+                                                        top: 0,
+                                                        left: 0,
+                                                        width: `${mockupDimensions?.width || stageWidth}px`,
+                                                        height: `${mockupDimensions?.height || stageHeight}px`,
+                                                        mixBlendMode: "difference",
+                                                        transform: `translate(${offsetX}px, ${offsetY}px) scale(${scaleX / 100}, ${scaleY / 100})`,
+                                                        transformOrigin: "top left",
+                                                    }}
+                                                >
+                                                    <img
+                                                        src={mockupDataUrl}
+                                                        alt="Pixel Difference Layer"
+                                                        className="w-full h-full block pointer-events-none select-none"
+                                                        style={{
+                                                            width: "100%",
+                                                            height: "100%",
+                                                            display: "block",
+                                                        }}
+                                                        draggable={false}
+                                                    />
+                                                </div>
                                             </div>
+                                        )}
+
+                                        {/* Mode 4: Side-by-Side Dual View */}
+                                        {comparisonMode === "sideBySide" && (
+                                            <div className="absolute inset-0 grid grid-cols-2 pointer-events-none select-none bg-neutral-950">
+                                                <div className="relative border-r border-neutral-800 p-2 overflow-hidden flex items-center justify-center">
+                                                    <span className="absolute top-2 left-2 z-10 px-2 py-0.5 bg-pink-950/80 text-pink-300 border border-pink-500/40 rounded text-[10px] font-bold">
+                                                        📐 Figma Mockup
+                                                    </span>
+                                                    <img
+                                                        src={mockupDataUrl}
+                                                        alt="Figma Mockup"
+                                                        className="w-full h-full object-contain pointer-events-none"
+                                                        draggable={false}
+                                                    />
+                                                </div>
+                                                <div className="relative p-2 overflow-hidden flex items-center justify-center">
+                                                    <span className="absolute top-2 left-2 z-10 px-2 py-0.5 bg-blue-950/80 text-blue-300 border border-blue-500/40 rounded text-[10px] font-bold">
+                                                        🌐 Live Web Slicing
+                                                    </span>
+                                                    <img
+                                                        src={liveDataUrl || ""}
+                                                        alt="Live Screenshot"
+                                                        className="w-full h-full object-contain pointer-events-none"
+                                                        draggable={false}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+
+                                {/* Slider Handle in Slider Mode */}
+                                {comparisonMode === "slider" && (
+                                    <div
+                                        onMouseDown={handleMouseDownOnSlider}
+                                        className="absolute top-0 bottom-0 z-30 cursor-ew-resize flex items-center justify-center"
+                                        style={{
+                                            left: `${sliderPosition}%`,
+                                            transform: "translateX(-50%)",
+                                        }}
+                                    >
+                                        <div className="w-8 h-8 rounded-full bg-pink-600 text-white shadow-xl shadow-pink-600/50 border-2 border-white flex items-center justify-center hover:scale-110 active:scale-95 transition-transform cursor-ew-resize">
+                                            <ArrowLeftRight className="w-4 h-4" />
                                         </div>
-                                    )}
-                                </>
-                            )}
+                                    </div>
+                                )}
 
-                            {/* Slider Handle in Slider Mode */}
-                            {comparisonMode === "slider" && (
-                                <div
-                                    onMouseDown={handleMouseDownOnSlider}
-                                    className="absolute top-0 bottom-0 z-30 cursor-ew-resize flex items-center justify-center"
-                                    style={{
-                                        left: `${sliderPosition}%`,
-                                        transform: "translateX(-50%)",
-                                    }}
-                                >
-                                    <div className="w-8 h-8 rounded-full bg-pink-600 text-white shadow-xl shadow-pink-600/50 border-2 border-white flex items-center justify-center hover:scale-110 active:scale-95 transition-transform cursor-ew-resize">
-                                        <ArrowLeftRight className="w-4 h-4" />
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Watermark Badges on corners */}
-                            {comparisonMode === "slider" && (
-                                <>
-                                    <div className="absolute top-3 left-3 z-20 pointer-events-none bg-neutral-900/80 backdrop-blur-md px-2.5 py-1 rounded-lg border border-neutral-700 text-[11px] font-semibold text-pink-300">
-                                        {!isSwapped
-                                            ? "📐 Figma Mockup"
-                                            : "🌐 Live Screenshot"}
-                                    </div>
-                                    <div className="absolute top-3 right-3 z-20 pointer-events-none bg-neutral-900/80 backdrop-blur-md px-2.5 py-1 rounded-lg border border-neutral-700 text-[11px] font-semibold text-sky-300">
-                                        {!isSwapped
-                                            ? "🌐 Live Screenshot"
-                                            : "📐 Figma Mockup"}
-                                    </div>
-                                </>
-                            )}
+                                {/* Watermark Badges on corners */}
+                                {comparisonMode === "slider" && (
+                                    <>
+                                        <div className="absolute top-3 left-3 z-20 pointer-events-none bg-neutral-900/80 backdrop-blur-md px-2.5 py-1 rounded-lg border border-neutral-700 text-[11px] font-semibold text-pink-300">
+                                            {!isSwapped
+                                                ? "📐 Figma Mockup"
+                                                : "🌐 Live Screenshot"}
+                                        </div>
+                                        <div className="absolute top-3 right-3 z-20 pointer-events-none bg-neutral-900/80 backdrop-blur-md px-2.5 py-1 rounded-lg border border-neutral-700 text-[11px] font-semibold text-sky-300">
+                                            {!isSwapped
+                                                ? "🌐 Live Screenshot"
+                                                : "📐 Figma Mockup"}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
                         </div>
                     )}
                 </div>
@@ -986,6 +1415,15 @@ export const VisualComparisonModal: React.FC<VisualComparisonModalProps> = ({
                                 <span className="text-pink-300">
                                     {mockupDimensions.width}×
                                     {mockupDimensions.height}px
+                                </span>
+                                <span className="text-neutral-500">→</span>
+                                <span className="text-neutral-300">
+                                    {Math.round(mockupRenderWidth)}×
+                                    {Math.round(mockupRenderHeight)}px
+                                </span>
+                                <span className="text-neutral-500 text-[10px]">
+                                    ({Math.round(scaleX)}
+                                    {!lockAspect && `×${Math.round(scaleY)}`}%)
                                 </span>
                             </span>
                         )}
