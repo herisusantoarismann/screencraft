@@ -20,6 +20,7 @@ import {
     sendToSlackWebhook,
     type WebhookType,
 } from "../../services/webhookDispatcher";
+import { useSettingsStore } from "../../stores/settingsStore";
 import type { SystemDiagnostics } from "../../types/diagnostics";
 
 interface WebhookModalProps {
@@ -60,10 +61,13 @@ export const WebhookModal: React.FC<WebhookModalProps> = ({
     initialNotes = "",
     diagnostics,
 }) => {
+    const { discordWebhookUrl, slackWebhookUrl } = useSettingsStore();
     const [webhookUrl, setWebhookUrl] = useState<string>("");
     const [notes, setNotes] = useState<string>("");
     const [stackTrace, setStackTrace] = useState<string>("");
-    const [attachSpecs, setAttachSpecs] = useState<boolean>(false);
+    const [attachSpecs, setAttachSpecs] = useState<boolean>(
+        () => useSettingsStore.getState().attachSpecsWatermark
+    );
     const [targetApp, setTargetApp] = useState<string>("");
     const [windowTitle, setWindowTitle] = useState<string>("");
     const [isCustomApp, setIsCustomApp] = useState<boolean>(false);
@@ -74,17 +78,24 @@ export const WebhookModal: React.FC<WebhookModalProps> = ({
         message: string;
     } | null>(null);
 
-    // Initialize webhook URL from localStorage and initialNotes
+    // Initialize webhook URL from localStorage/settings and initialNotes
     useEffect(() => {
         if (isOpen) {
+            const {
+                discordWebhookUrl: storeDiscord,
+                slackWebhookUrl: storeSlack,
+                attachSpecsWatermark,
+            } = useSettingsStore.getState();
             const savedUrl = getLastWebhookUrl();
-            setWebhookUrl(savedUrl);
-            setDetectedType(detectWebhookType(savedUrl));
+            const initialUrl =
+                savedUrl || storeDiscord || storeSlack || "";
+            setWebhookUrl(initialUrl);
+            setDetectedType(detectWebhookType(initialUrl));
             setNotes(initialNotes);
             setStackTrace("");
             setFeedback(null);
             setIsSending(false);
-            setAttachSpecs(false);
+            setAttachSpecs(attachSpecsWatermark);
             if (diagnostics) {
                 setTargetApp(diagnostics.active_window_app || "");
                 setWindowTitle(diagnostics.active_window_title || "");
@@ -245,6 +256,40 @@ export const WebhookModal: React.FC<WebhookModalProps> = ({
                                 </span>
                             )}
                         </div>
+
+                        {/* Quick Presets from Settings */}
+                        {(discordWebhookUrl || slackWebhookUrl) && (
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-[10px] text-neutral-500 font-medium">Settings Presets:</span>
+                                {discordWebhookUrl && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setWebhookUrl(discordWebhookUrl);
+                                            setDetectedType(detectWebhookType(discordWebhookUrl));
+                                            if (feedback) setFeedback(null);
+                                        }}
+                                        className="text-[10px] px-2 py-0.5 rounded-md bg-indigo-950/70 hover:bg-indigo-900 text-indigo-300 border border-indigo-500/30 transition-colors cursor-pointer"
+                                    >
+                                        Discord
+                                    </button>
+                                )}
+                                {slackWebhookUrl && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setWebhookUrl(slackWebhookUrl);
+                                            setDetectedType(detectWebhookType(slackWebhookUrl));
+                                            if (feedback) setFeedback(null);
+                                        }}
+                                        className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-950/70 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/30 transition-colors cursor-pointer"
+                                    >
+                                        Slack
+                                    </button>
+                                )}
+                            </div>
+                        )}
+
                         <input
                             type="url"
                             value={webhookUrl}
@@ -298,9 +343,10 @@ export const WebhookModal: React.FC<WebhookModalProps> = ({
                                 <input
                                     type="checkbox"
                                     checked={attachSpecs}
-                                    onChange={(e) =>
-                                        setAttachSpecs(e.target.checked)
-                                    }
+                                    onChange={(e) => {
+                                        setAttachSpecs(e.target.checked);
+                                        useSettingsStore.getState().setAttachSpecsWatermark(e.target.checked);
+                                    }}
                                     className="rounded accent-indigo-600 w-4 h-4 cursor-pointer"
                                 />
                                 <div className="flex items-center gap-1.5 text-xs text-neutral-300 font-medium">

@@ -699,7 +699,10 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                                 <div className="flex items-center gap-1 bg-neutral-950/80 p-0.5 rounded-xl border border-neutral-800">
                                     <button
                                         type="button"
-                                        onClick={() => setOutputFormat("jira")}
+                                        onClick={() => {
+                                            setOutputFormat("jira");
+                                            useSettingsStore.getState().setDefaultTicketFormat("jira");
+                                        }}
                                         className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                                             outputFormat === "jira"
                                                 ? "bg-blue-600 text-white shadow-xs"
@@ -710,9 +713,10 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={() =>
-                                            setOutputFormat("github")
-                                        }
+                                        onClick={() => {
+                                            setOutputFormat("github");
+                                            useSettingsStore.getState().setDefaultTicketFormat("markdown");
+                                        }}
                                         className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                                             outputFormat === "github"
                                                 ? "bg-emerald-600 text-white shadow-xs"
@@ -1102,9 +1106,10 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                                     <input
                                         type="checkbox"
                                         checked={attachSpecs}
-                                        onChange={(e) =>
-                                            setAttachSpecs(e.target.checked)
-                                        }
+                                        onChange={(e) => {
+                                            setAttachSpecs(e.target.checked);
+                                            useSettingsStore.getState().setAttachSpecsWatermark(e.target.checked);
+                                        }}
                                         className="rounded accent-purple-600 w-4 h-4 cursor-pointer"
                                     />
                                     <div className="flex items-center gap-1.5 text-xs text-neutral-300">

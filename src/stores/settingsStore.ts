@@ -78,10 +78,10 @@ export const DEFAULT_SETTINGS = {
   saveMode: "ask" as SaveMode,
   autoSavePath: "",
   namingPattern: "screencraft-{YYYY-MM-DD}_{HH-mm-ss}",
-  autoCopyToClipboard: true,
+  autoCopyToClipboard: false,
 
-  attachSpecsWatermark: true,
-  includeDiagnosticsOnCopy: true,
+  attachSpecsWatermark: false,
+  includeDiagnosticsOnCopy: false,
   defaultTicketFormat: "markdown" as TicketFormat,
 
   discordWebhookUrl: "",
@@ -139,6 +139,18 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: "screencraft_settings",
+      version: 2,
+      migrate: (persistedState: any, version: number) => {
+        if (version < 2) {
+          return {
+            ...persistedState,
+            attachSpecsWatermark: false,
+            includeDiagnosticsOnCopy: false,
+            autoCopyToClipboard: false,
+          };
+        }
+        return persistedState;
+      },
       partialize: (state) => {
         // Exclude ephemeral UI states from persistence
         const { isSettingsOpen, activeTab, hasActiveScreenshot, ...persisted } =
