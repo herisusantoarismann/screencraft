@@ -20,7 +20,7 @@ import {
 import { useRecordStore } from "../../stores/recordStore";
 import { convertWebmToGif } from "../../services/gifConverter";
 import { compressVideoForPlatform } from "../../services/videoCompressor";
-import { saveFileWithDialog } from "../../services/fileSaveService";
+import { saveFileWithDialog, formatNamingPattern } from "../../services/fileSaveService";
 
 const saveBlobFile = async (
   blob: Blob,
@@ -267,10 +267,7 @@ export const VideoTrimModal: React.FC = () => {
         (progress) => setConversionProgress(progress)
       );
 
-      const now = new Date();
-      const dateStr = now.toISOString().slice(0, 10);
-      const timeStr = `${String(now.getHours()).padStart(2, "0")}-${String(now.getMinutes()).padStart(2, "0")}-${String(now.getSeconds()).padStart(2, "0")}`;
-      const fileName = `screencraft-record-${dateStr}_${timeStr}.gif`;
+      const fileName = formatNamingPattern("gif");
       const res = await saveBlobFile(gifBlob, fileName, "GIF Animation", "gif");
 
       if (res.canceled) return;
@@ -290,10 +287,7 @@ export const VideoTrimModal: React.FC = () => {
   const handleExportWebm = useCallback(async () => {
     if (!recordingBlob) return;
 
-    const now = new Date();
-    const dateStr = now.toISOString().slice(0, 10);
-    const timeStr = `${String(now.getHours()).padStart(2, "0")}-${String(now.getMinutes()).padStart(2, "0")}-${String(now.getSeconds()).padStart(2, "0")}`;
-    const fileName = `screencraft-record-${dateStr}_${timeStr}.webm`;
+    const fileName = formatNamingPattern("webm");
     const res = await saveBlobFile(recordingBlob, fileName, "WebM Video", "webm");
 
     if (res.canceled) return;
@@ -321,14 +315,15 @@ export const VideoTrimModal: React.FC = () => {
         );
 
         const ext = result.fileName.endsWith(".mp4") ? "mp4" : "webm";
+        const targetFileName = formatNamingPattern(ext);
         const filterName = ext === "mp4" ? "MP4 Video" : "WebM Video";
-        const res = await saveBlobFile(result.blob, result.fileName, filterName, ext);
+        const res = await saveBlobFile(result.blob, targetFileName, filterName, ext);
 
         if (res.canceled) return;
 
         const platformName = platform === "slack" ? "Slack (< 5MB)" : "Jira (< 10MB)";
         setFeedbackToast(
-          `Video ${platformName} saved successfully: ${res.fileName || result.fileName} (${result.sizeMB} MB)! 🎉`
+          `Video ${platformName} saved successfully: ${res.fileName || targetFileName} (${result.sizeMB} MB)! 🎉`
         );
         setTimeout(() => setFeedbackToast(null), 5000);
       } catch (err) {

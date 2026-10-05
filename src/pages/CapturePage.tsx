@@ -25,7 +25,10 @@ import {
     getSystemDiagnostics,
     attachDiagnosticsFooter,
 } from "../services/diagnosticsService";
-import { saveFileWithDialog } from "../services/fileSaveService";
+import {
+    saveFileWithDialog,
+    formatNamingPattern,
+} from "../services/fileSaveService";
 import { ScreenCraftTemplate } from "../components/templates";
 import { AboutModal } from "../components/organisms";
 
@@ -47,7 +50,8 @@ export const CapturePage: React.FC = () => {
         setSpotlightRadius,
     } = useToolStore();
 
-    const { autoCopyToClipboard, enableShutterFlash } = useSettingsStore();
+    const autoCopyToClipboard = useSettingsStore((s) => s.autoCopyToClipboard);
+    const enableShutterFlash = useSettingsStore((s) => s.enableShutterFlash);
 
     const {
         capturedImage,
@@ -155,7 +159,9 @@ export const CapturePage: React.FC = () => {
         useState<boolean>(false);
     const [isAboutModalOpen, setIsAboutModalOpen] = useState<boolean>(false);
     const [includeDiagnosticsStamp, setIncludeDiagnosticsStamp] =
-        useState<boolean>(() => useSettingsStore.getState().attachSpecsWatermark);
+        useState<boolean>(
+            () => useSettingsStore.getState().attachSpecsWatermark,
+        );
     const [diagnostics, setDiagnostics] = useState<SystemDiagnostics | null>(
         null,
     );
@@ -746,9 +752,23 @@ export const CapturePage: React.FC = () => {
         const rawUrl = generateExportDataUrl();
         if (!rawUrl) return null;
 
-        if (includeDiagnosticsStamp && diagnostics) {
+        if (includeDiagnosticsStamp) {
             try {
-                return await attachDiagnosticsFooter(rawUrl, diagnostics);
+                let diag = diagnostics;
+                if (!diag) {
+                    try {
+                        diag = await getSystemDiagnostics();
+                        setDiagnostics(diag);
+                    } catch (diagErr) {
+                        console.warn(
+                            "[CapturePage] Diagnostics fallback fetch failed:",
+                            diagErr,
+                        );
+                    }
+                }
+                if (diag) {
+                    return await attachDiagnosticsFooter(rawUrl, diag);
+                }
             } catch (err) {
                 console.error(
                     "[CapturePage] Failed to attach diagnostics footer:",
@@ -799,12 +819,10 @@ export const CapturePage: React.FC = () => {
         setDownloadToast(null);
         try {
             const dataUrl = await getFinalExportDataUrl();
-            if (!dataUrl) throw new Error("Failed to get screenshot image data.");
+            if (!dataUrl)
+                throw new Error("Failed to get screenshot image data.");
 
-            const now = new Date();
-            const dateStr = now.toISOString().slice(0, 10);
-            const timeStr = `${String(now.getHours()).padStart(2, "0")}-${String(now.getMinutes()).padStart(2, "0")}-${String(now.getSeconds()).padStart(2, "0")}`;
-            const targetName = `screencraft-${dateStr}_${timeStr}.png`;
+            const targetName = formatNamingPattern("png");
 
             const res = await saveFileWithDialog({
                 defaultName: targetName,
@@ -821,7 +839,9 @@ export const CapturePage: React.FC = () => {
             if (res.success) {
                 setDownloadSuccess(true);
                 const displayLocation = res.fileName || "selected folder";
-                setDownloadToast(`Image saved successfully: ${displayLocation}! 🎉`);
+                setDownloadToast(
+                    `Image saved successfully: ${displayLocation}! 🎉`,
+                );
                 setTimeout(() => {
                     setDownloadSuccess(false);
                     setDownloadToast(null);
@@ -871,7 +891,9 @@ export const CapturePage: React.FC = () => {
 
     // Keep hasActiveScreenshot synchronized in settingsStore
     useEffect(() => {
-        useSettingsStore.getState().setHasActiveScreenshot(Boolean(capturedImage));
+        useSettingsStore
+            .getState()
+            .setHasActiveScreenshot(Boolean(capturedImage));
     }, [capturedImage]);
 
     const capturedImageRef = useRef(capturedImage);
@@ -914,20 +936,26 @@ export const CapturePage: React.FC = () => {
                     unlistenFns.push(uAbout);
                 }
 
-                const uTrayFloating = await listen("tray-show-floating", async () => {
-                    if (capturedImageRef.current) {
-                        await handleFullCancelCaptureRef.current();
-                    }
-                    setIsAboutModalOpen(false);
-                    useSettingsStore.getState().setIsSettingsOpen(false);
-                });
+                const uTrayFloating = await listen(
+                    "tray-show-floating",
+                    async () => {
+                        if (capturedImageRef.current) {
+                            await handleFullCancelCaptureRef.current();
+                        }
+                        setIsAboutModalOpen(false);
+                        useSettingsStore.getState().setIsSettingsOpen(false);
+                    },
+                );
                 if (isCancelled) {
                     uTrayFloating();
                 } else {
                     unlistenFns.push(uTrayFloating);
                 }
             } catch (err) {
-                console.error("[CapturePage] Failed to register tray listeners:", err);
+                console.error(
+                    "[CapturePage] Failed to register tray listeners:",
+                    err,
+                );
             }
         };
 
@@ -1095,9 +1123,13 @@ export const CapturePage: React.FC = () => {
                 onOpenMarkdownModal={setIsMarkdownModalOpen}
                 onOpenDiagnosticsModal={setIsDiagnosticsModalOpen}
                 onOpenComparisonModal={setIsComparisonModalOpen}
-                onToggleDiagnosticsStamp={() =>
-                    setIncludeDiagnosticsStamp((prev) => !prev)
-                }
+                onToggleDiagnosticsStamp={() => {
+                    const nextVal = !includeDiagnosticsStamp;
+                    setIncludeDiagnosticsStamp(nextVal);
+                    useSettingsStore
+                        .getState()
+                        .setAttachSpecsWatermark(nextVal);
+                }}
                 onResetCropArea={() => setCropArea(null)}
                 onClearAnnotations={clearAnnotations}
                 onCancelCapture={() => void handleFullCancelCapture()}

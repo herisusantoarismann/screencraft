@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { useSettingsStore } from "../stores/settingsStore";
 
 export const LAST_SAVE_DIR_KEY = "screencraft_last_saved_dir";
 
@@ -16,6 +17,43 @@ export function setLastSaveDir(dir: string): void {
             localStorage.setItem(LAST_SAVE_DIR_KEY, dir);
         }
     } catch {}
+}
+
+/**
+ * Format dynamic filename according to user's naming pattern setting
+ * (Supports {YYYY}, {MM}, {DD}, {HH}, {mm}, {ss}, {YYYY-MM-DD}, {HH-mm-ss})
+ */
+export function formatNamingPattern(ext = "png"): string {
+    const settings = useSettingsStore.getState();
+    const pattern = settings.namingPattern || "screencraft-{YYYY-MM-DD}_{HH-mm-ss}";
+
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    const yyyy = now.getFullYear();
+    const mm = pad(now.getMonth() + 1);
+    const dd = pad(now.getDate());
+    const hh = pad(now.getHours());
+    const min = pad(now.getMinutes());
+    const ss = pad(now.getSeconds());
+
+    let formatted = pattern
+        .replace(/{YYYY}/g, yyyy.toString())
+        .replace(/{MM}/g, mm)
+        .replace(/{DD}/g, dd)
+        .replace(/{HH}/g, hh)
+        .replace(/{mm}/g, min)
+        .replace(/{ss}/g, ss)
+        .replace(/{YYYY-MM-DD}/g, `${yyyy}-${mm}-${dd}`)
+        .replace(/{HH-mm-ss}/g, `${hh}-${min}-${ss}`);
+
+    // Strip any hardcoded image/video extension user might have entered in the pattern
+    formatted = formatted.replace(/\.(png|jpe?g|webp|gif|webm|mp4)$/i, "");
+    if (!formatted.trim()) {
+        formatted = `screencraft-${yyyy}-${mm}-${dd}_${hh}-${min}-${ss}`;
+    }
+
+    const cleanExt = ext.replace(/^\.+/, "");
+    return `${formatted}.${cleanExt}`;
 }
 
 export interface SaveFileOptions {
@@ -50,10 +88,10 @@ export async function blobToBase64(blob: Blob): Promise<string> {
 }
 
 /**
- * Universal Save File Dialog:
- * Opens native OS "Save As..." dialog via Rust (rfd) with the last used directory,
- * allows user to pick a folder and rename the file, remembers the chosen folder for next time,
- * and handles cancellation gracefully.
+ * Universal Save File Service:
+ * Obeys user preferences:
+ * - If saveMode === 'auto' and autoSavePath is configured: directly saves to the folder without popup.
+ * - If saveMode === 'ask' (or fallback): opens native OS "Save As..." dialog with autoSavePath or last used directory.
  */
 export async function saveFileWithDialog(
     options: SaveFileOptions
@@ -68,7 +106,47 @@ export async function saveFileWithDialog(
             base64Data = data;
         }
 
-        const lastDir = getLastSaveDir();
+        const { saveMode, autoSavePath } = useSettingsStore.getState();
+        const trimmedAutoPath = autoSavePath ? autoSavePath.trim() : "";
+
+        // Mode 1: Auto-Save silently to user's configured directory if enabled
+        if (saveMode === "auto" && trimmedAutoPath) {
+            try {
+                const sep = trimmedAutoPath.includes("/") && !trimmedAutoPath.includes("\\") ? "/" : "\\";
+                const cleanDir = trimmedAutoPath.replace(/[/\\]+$/, "");
+                const targetPath = `${cleanDir}${sep}${defaultName}`;
+
+                const autoRes = await invoke<{
+                    success: boolean;
+                    saved_path: string | null;
+                    saved_dir: string | null;
+                    file_name: string | null;
+                }>("save_file_to_path", {
+                    targetPath,
+                    base64Data,
+                });
+
+                if (autoRes.success) {
+                    setLastSaveDir(cleanDir);
+                    return {
+                        success: true,
+                        savedPath: autoRes.saved_path,
+                        savedDir: autoRes.saved_dir || cleanDir,
+                        fileName: autoRes.file_name || defaultName,
+                        canceled: false,
+                    };
+                }
+            } catch (autoErr) {
+                console.warn(
+                    "[fileSaveService] Auto-save to predefined folder failed, falling back to dialog:",
+                    autoErr
+                );
+            }
+        }
+
+        // Mode 2: Always Ask (or fallback) -> Open native Save As dialog
+        // Priority for starting directory: user's configured autoSavePath, then last used directory
+        const initialDir = trimmedAutoPath || getLastSaveDir();
 
         // 1. Attempt native Tauri Save As Dialog via Rust
         try {
@@ -80,7 +158,7 @@ export async function saveFileWithDialog(
             }>("save_file_with_dialog", {
                 defaultName,
                 base64Data,
-                lastDir,
+                lastDir: initialDir,
                 filterName,
                 filterExtension,
             });

@@ -327,6 +327,53 @@ fn save_file_to_downloads(window: WebviewWindow, file_name: String, base64_data:
 }
 
 #[tauri::command]
+fn pick_directory(window: WebviewWindow, default_path: Option<String>) -> Result<Option<String>, String> {
+    let mut dialog = rfd::FileDialog::new();
+    if let Some(ref p) = default_path {
+        let path = std::path::Path::new(p);
+        if path.exists() && path.is_dir() {
+            dialog = dialog.set_directory(path);
+        }
+    }
+    let _ = window.set_always_on_top(false);
+    let picked = dialog.pick_folder();
+    let res = picked.map(|p| p.to_string_lossy().to_string());
+    Ok(res)
+}
+
+#[tauri::command]
+fn save_file_to_path(target_path: String, base64_data: String) -> Result<SaveResult, String> {
+    let clean_base64 = if let Some(pos) = base64_data.find(',') {
+        &base64_data[pos + 1..]
+    } else {
+        &base64_data
+    };
+
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(clean_base64)
+        .map_err(|e| format!("Failed to decode base64 data: {e}"))?;
+
+    let path = std::path::Path::new(&target_path);
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create directories for {}: {e}", target_path))?;
+    }
+
+    std::fs::write(path, bytes)
+        .map_err(|e| format!("Failed to write file to {}: {e}", path.display()))?;
+
+    let saved_dir = path.parent().map(|p| p.to_string_lossy().to_string());
+    let file_name = path.file_name().map(|f| f.to_string_lossy().to_string());
+
+    Ok(SaveResult {
+        success: true,
+        saved_path: Some(path.to_string_lossy().to_string()),
+        saved_dir,
+        file_name,
+    })
+}
+
+#[tauri::command]
 fn close_overlay(window: WebviewWindow) -> Result<(), String> {
     window.hide().map_err(|e| e.to_string())
 }
@@ -705,6 +752,8 @@ pub fn run() {
             trigger_screenshot,
             save_file_to_downloads,
             save_file_with_dialog,
+            save_file_to_path,
+            pick_directory,
             send_slack_webhook,
             send_discord_webhook,
             get_system_diagnostics,
