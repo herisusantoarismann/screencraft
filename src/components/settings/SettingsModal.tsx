@@ -4,7 +4,6 @@ import {
     Settings,
     FolderDown,
     FolderOpen,
-    Wrench,
     Webhook,
     X,
     RotateCcw,
@@ -13,6 +12,7 @@ import {
     Send,
     Loader2,
     Sparkles,
+    FileText,
 } from "lucide-react";
 import { useSettingsStore, DEFAULT_SETTINGS } from "../../stores/settingsStore";
 import { invoke } from "@tauri-apps/api/core";
@@ -23,7 +23,7 @@ export interface SettingsModalProps {
 }
 
 const SETTINGS_TABS: Array<{
-    id: "shortcuts" | "general" | "save" | "qa" | "webhooks";
+    id: "shortcuts" | "general" | "save" | "handoff" | "webhooks";
     label: string;
     icon: React.ComponentType<{ className?: string }>;
     iconColor: string;
@@ -47,9 +47,9 @@ const SETTINGS_TABS: Array<{
         iconColor: "text-emerald-400",
     },
     {
-        id: "qa",
-        label: "QA Defaults",
-        icon: Wrench,
+        id: "handoff",
+        label: "Handoff & Context",
+        icon: FileText,
         iconColor: "text-amber-400",
     },
     {
@@ -427,7 +427,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 </span>
                             </h2>
                             <p className="text-xs text-neutral-400">
-                                Configure shortcuts, export behaviors, QA
+                                Configure shortcuts, export behaviors,
                                 watermarks & webhooks
                             </p>
                         </div>
@@ -862,16 +862,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             </div>
                         )}
 
-                        {/* TAB 4: QA DEFAULTS */}
-                        {activeTab === "qa" && (
+                        {/* TAB 4: HANDOFF & CONTEXT */}
+                        {(activeTab === "handoff" || activeTab === "qa") && (
                             <div className="flex flex-col gap-5">
                                 <div>
                                     <h3 className="text-sm font-bold text-white mb-1">
-                                        QA & Bug Tracking Defaults
+                                        Handoff & System Context
                                     </h3>
                                     <p className="text-xs text-neutral-400">
-                                        Configure telemetry stamps, system
-                                        diagnostics, and ticket markdown formats
+                                        Configure system telemetry banners,
+                                        device specs, and documentation formats
                                     </p>
                                 </div>
 
@@ -879,11 +879,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 <div className="p-3.5 bg-neutral-950/60 border border-neutral-800 rounded-xl flex items-center justify-between">
                                     <div className="flex flex-col gap-1">
                                         <span className="text-xs font-semibold text-neutral-200">
-                                            Attach Hardware & OS Specs Stamp
+                                            Attach System Specs & Resolution Banner
                                         </span>
                                         <span className="text-[11px] text-neutral-500">
-                                            Include resolution, OS version, GPU,
-                                            and RAM telemetry watermark on
+                                            Include resolution, display scaling,
+                                            OS version, and GPU specs on
                                             exports
                                         </span>
                                     </div>
@@ -905,7 +905,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 {/* Default Ticket Format */}
                                 <div className="flex flex-col gap-2">
                                     <span className="text-xs font-semibold text-neutral-300">
-                                        Default Ticket Syntax Format
+                                        Default Documentation & Report Format
                                     </span>
                                     <div className="grid grid-cols-2 gap-3">
                                         <button

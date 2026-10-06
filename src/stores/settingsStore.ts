@@ -1,7 +1,13 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-export type SettingsTab = "shortcuts" | "general" | "save" | "qa" | "webhooks";
+export type SettingsTab =
+  | "shortcuts"
+  | "general"
+  | "save"
+  | "handoff"
+  | "webhooks"
+  | "qa"; // Backward-compatibility
 export type SaveMode = "ask" | "auto";
 export type TicketFormat = "markdown" | "jira";
 
@@ -23,7 +29,7 @@ export interface SettingsState {
   namingPattern: string;
   autoCopyToClipboard: boolean;
 
-  // Tab QA Defaults
+  // Tab Handoff & Context Defaults
   attachSpecsWatermark: boolean;
   includeDiagnosticsOnCopy: boolean; // Backward compatibility with CapturePage
   defaultTicketFormat: TicketFormat;
