@@ -321,7 +321,8 @@ export const VideoTrimModal: React.FC = () => {
 
         if (res.canceled) return;
 
-        const platformName = platform === "slack" ? "Slack (< 5MB)" : "Jira (< 10MB)";
+        const platformName =
+          platform === "slack" ? "Chat / Slack (< 5MB)" : "Web / Email (< 10MB)";
         setFeedbackToast(
           `Video ${platformName} saved successfully: ${res.fileName || targetFileName} (${result.sizeMB} MB)! 🎉`
         );
@@ -598,9 +599,9 @@ export const VideoTrimModal: React.FC = () => {
                 <span className="flex items-center gap-1.5">
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-400" />
                   {compressingPlatform === "slack"
-                    ? "Compressing video to fit Slack (< 5MB)..."
+                    ? "Compressing video to fit Chat / Slack (< 5MB)..."
                     : compressingPlatform === "jira"
-                    ? "Compressing video to fit Jira (< 10MB)..."
+                    ? "Compressing video to fit Web / Email (< 10MB)..."
                     : "Converting GIF via FFmpeg WebAssembly..."}
                 </span>
                 <span>{conversionProgress}%</span>
@@ -643,36 +644,36 @@ export const VideoTrimModal: React.FC = () => {
               <span>WebM</span>
             </button>
 
-            {/* Fit to Slack (< 5MB) */}
+            {/* Fit to Chat / Slack (< 5MB) */}
             <button
               type="button"
               onClick={() => void handleCompressForPlatform("slack")}
               disabled={isConverting}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-950/80 hover:bg-emerald-900 text-emerald-200 border border-emerald-500/40 transition-all disabled:opacity-50"
-              title="Auto-compress video under 5MB for Slack"
+              title="Auto-compress video under 5MB for Chat / Slack"
             >
               {compressingPlatform === "slack" ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
               ) : (
                 <Share2 className="w-3.5 h-3.5 text-emerald-400" />
               )}
-              <span>Slack (&lt; 5MB)</span>
+              <span>Chat / Slack (&lt; 5MB)</span>
             </button>
 
-            {/* Fit to Jira (< 10MB) */}
+            {/* Fit to Web / Email (< 10MB) */}
             <button
               type="button"
               onClick={() => void handleCompressForPlatform("jira")}
               disabled={isConverting}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-950/80 hover:bg-blue-900 text-blue-200 border border-blue-500/40 transition-all disabled:opacity-50"
-              title="Auto-compress video under 10MB for Jira"
+              title="Auto-compress video under 10MB for Web / Email / Docs"
             >
               {compressingPlatform === "jira" ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400" />
               ) : (
                 <FileVideo className="w-3.5 h-3.5 text-blue-400" />
               )}
-              <span>Jira (&lt; 10MB)</span>
+              <span>Web / Email (&lt; 10MB)</span>
             </button>
 
             {/* Export as GIF (WASM) */}
