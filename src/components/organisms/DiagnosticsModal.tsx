@@ -49,7 +49,7 @@ export const DiagnosticsModal: React.FC<DiagnosticsModalProps> = ({
                 <div className="flex items-center justify-between px-5 py-3.5 border-b border-neutral-800 bg-neutral-950/60">
                     <div className="flex items-center gap-2 text-indigo-400 font-bold text-sm">
                         <ShieldCheck className="w-4 h-4 text-indigo-400" />
-                        <span>Environment & Hardware Diagnostics</span>
+                        <span>System & Hardware Specs Inspector</span>
                     </div>
                     <button
                         type="button"

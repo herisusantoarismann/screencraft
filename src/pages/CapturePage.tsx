@@ -259,7 +259,7 @@ export const CapturePage: React.FC = () => {
                 useSettingsStore.getState().attachSpecsWatermark,
             );
 
-            // Automatically fetch environment & hardware diagnostics for QA inspection & watermark
+            // Automatically fetch environment & hardware diagnostics for specs inspector & context banner
             getSystemDiagnostics()
                 .then((diag) => {
                     setDiagnostics(diag);
@@ -345,7 +345,7 @@ export const CapturePage: React.FC = () => {
                 return;
             }
 
-            // Handle QA Stamp (Severity Stamps & Issue Tags)
+            // Handle Callout Stamp (Priority Badges & Callout Tags)
             if (activeTool === "stamp") {
                 let preset: {
                     id: string;
@@ -799,7 +799,7 @@ export const CapturePage: React.FC = () => {
         }
     }, [getFinalExportDataUrl]);
 
-    // Export: Copy Screenshot Image to OS Clipboard without closing overlay (for QA modal workflow)
+    // Export: Copy Screenshot Image to OS Clipboard without closing overlay (for report & handoff workflow)
     const handleCopyScreenshotOnly = useCallback(async (): Promise<boolean> => {
         const dataUrl = await getFinalExportDataUrl();
         if (!dataUrl) return false;

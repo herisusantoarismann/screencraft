@@ -25,7 +25,7 @@ export async function getSystemDiagnostics(): Promise<SystemDiagnostics> {
       active_window_app: "Application",
       active_window_version: "",
       timestamp: new Date().toLocaleTimeString(),
-      compact_stamp: `OS: Windows | Display: ${window.screen.width}x${window.screen.height} @ ${Math.round((window.devicePixelRatio || 1) * 100)}% | ScreenCraft QA`,
+      compact_stamp: `OS: Windows | Display: ${window.screen.width}x${window.screen.height} @ ${Math.round((window.devicePixelRatio || 1) * 100)}% | ScreenCraft`,
       markdown_table: "### Environment Diagnostics\n*(Unavailable)*\n",
       available_apps: [],
     };
@@ -71,11 +71,11 @@ export async function attachDiagnosticsFooter(
       ctx.fillStyle = gradient;
       ctx.fillRect(0, bannerY, img.width, 2);
 
-      // 4. Render Badge Chip [QA SPECS]
+      // 4. Render Badge Chip [SYSTEM INFO]
       const fontSize = Math.max(10, Math.min(13, Math.round(bannerHeight * 0.36)));
       const badgeY = bannerY + Math.round(bannerHeight * 0.22);
       const badgeHeight = Math.round(bannerHeight * 0.58);
-      const badgeWidth = Math.round(fontSize * 7.5);
+      const badgeWidth = Math.round(fontSize * 8.5);
       const startX = 14;
 
       ctx.fillStyle = "#1e1b4b"; // Dark purple background
@@ -90,7 +90,7 @@ export async function attachDiagnosticsFooter(
       ctx.fillStyle = "#a5b4fc"; // Indigo accent
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText("QA SPECS", startX + badgeWidth / 2, badgeY + badgeHeight / 2);
+      ctx.fillText("SYSTEM INFO", startX + badgeWidth / 2, badgeY + badgeHeight / 2);
 
       // 5. Render Diagnostics Content Text
       ctx.textAlign = "left";
