@@ -423,7 +423,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             <h2 className="text-base font-bold text-white flex items-center gap-2">
                                 Settings & Preferences
                                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-neutral-800 text-neutral-400 border border-neutral-700">
-                                    v0.1.0
+                                    v{__APP_VERSION__}
                                 </span>
                             </h2>
                             <p className="text-xs text-neutral-400">

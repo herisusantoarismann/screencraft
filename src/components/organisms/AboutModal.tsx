@@ -38,7 +38,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
               <span className="text-2xl font-black text-white tracking-wider font-mono">SC</span>
             </div>
             <span className="absolute -bottom-2 -right-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-neutral-950 border border-neutral-700 text-purple-300 font-mono">
-              v0.1.0
+              v{__APP_VERSION__}
             </span>
           </div>
 
