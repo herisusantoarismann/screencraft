@@ -47,30 +47,30 @@ type OutputFormat = "jira" | "github";
 const PRESET_SEVERITIES = [
     {
         id: "critical",
-        label: "Critical / Blocker",
+        label: "Urgent / Blocker",
         emoji: "🔴",
         color: "text-red-400 border-red-500/50 bg-red-950/40",
     },
     {
         id: "major",
-        label: "Major Defect",
+        label: "High Priority",
         emoji: "🟠",
         color: "text-orange-400 border-orange-500/50 bg-orange-950/40",
     },
     {
         id: "minor",
-        label: "Minor / Cosmetic",
+        label: "Low Priority / Note",
         emoji: "🟡",
         color: "text-yellow-400 border-yellow-500/50 bg-yellow-950/40",
     },
 ];
 
 const PRESET_CATEGORIES = [
-    "[BUG]",
-    "[UI/CSS GLITCH]",
-    "[PERF / LAG]",
+    "[ISSUE]",
+    "[UI REVIEW]",
+    "[PERF / SPEED]",
     "[SECURITY]",
-    "[TYPO]",
+    "[COPY / TYPO]",
 ];
 
 const CUSTOM_SEVERITIES_KEY = "screencraft_custom_severities";
@@ -108,8 +108,8 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
     onClose,
 }) => {
     // Mode tabs & format
-    const [activeTab, setActiveTab] = useState<"qaTicket" | "flowDoc">(
-        "qaTicket",
+    const [activeTab, setActiveTab] = useState<"issueHandoff" | "flowDoc">(
+        "issueHandoff",
     );
     const [outputFormat, setOutputFormat] = useState<OutputFormat>(() => {
         const fmt = useSettingsStore.getState().defaultTicketFormat;
@@ -118,8 +118,8 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
 
     // Form Fields
     const [title, setTitle] = useState("");
-    const [severity, setSeverity] = useState("Critical / Blocker");
-    const [category, setCategory] = useState("[BUG]");
+    const [severity, setSeverity] = useState("Urgent / Blocker");
+    const [category, setCategory] = useState("[ISSUE]");
 
     // Custom Options Stored in LocalStorage
     const [customSeverities, setCustomSeverities] = useState<string[]>(() =>
@@ -156,7 +156,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
         setCustomSeverities(updated);
         saveStoredCustoms(CUSTOM_SEVERITIES_KEY, updated);
         if (severity === target) {
-            setSeverity("Critical / Blocker");
+            setSeverity("Urgent / Blocker");
         }
     };
 
@@ -184,7 +184,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
         setCustomCategories(updated);
         saveStoredCustoms(CUSTOM_CATEGORIES_KEY, updated);
         if (category === target) {
-            setCategory("[BUG]");
+            setCategory("[ISSUE]");
         }
     };
 
@@ -629,8 +629,8 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-800 bg-neutral-950/70 shrink-0">
                     <div className="flex items-center gap-2 text-purple-400 font-semibold text-sm">
-                        <Bug className="w-4 h-4 text-purple-400" />
-                        <span>QA Defect & Bug Ticket Formatter</span>
+                        <FileCode2 className="w-4 h-4 text-purple-400" />
+                        <span>Smart Report & Documentation</span>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -638,15 +638,15 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                         <div className="flex items-center p-0.5 bg-neutral-800/90 rounded-xl border border-neutral-700/80">
                             <button
                                 type="button"
-                                onClick={() => setActiveTab("qaTicket")}
+                                onClick={() => setActiveTab("issueHandoff")}
                                 className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                                    activeTab === "qaTicket"
+                                    activeTab === "issueHandoff"
                                         ? "bg-purple-600 text-white shadow-xs"
                                         : "text-neutral-400 hover:text-white"
                                 }`}
                             >
                                 <FileCode2 className="w-3.5 h-3.5" />
-                                <span>Bug Ticket</span>
+                                <span>Issue Handoff</span>
                             </button>
                             {nodes.length > 0 && (
                                 <button
@@ -659,7 +659,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                                     }`}
                                 >
                                     <Workflow className="w-3.5 h-3.5" />
-                                    <span>Flow ({nodes.length})</span>
+                                    <span>Workflow Guide ({nodes.length})</span>
                                 </button>
                             )}
                         </div>
@@ -688,7 +688,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
 
                 {/* Modal Scrollable Body */}
                 <div className="p-4 sm:p-5 flex flex-col gap-4 overflow-y-auto max-h-[calc(92vh-135px)]">
-                    {activeTab === "qaTicket" ? (
+                    {activeTab === "issueHandoff" ? (
                         <>
                             {/* 1. Format Selection Tabs (Jira vs GitHub/Linear) */}
                             <div className="flex items-center justify-between border-b border-neutral-800 pb-2.5">
@@ -734,7 +734,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
                                 <div className="flex flex-col gap-1.5 p-2 rounded-xl bg-neutral-900/60 border border-neutral-800">
                                     <div className="flex items-center justify-between">
                                         <label className="text-[10px] uppercase font-bold text-neutral-400">
-                                            QA Severity Level
+                                            Priority Level
                                         </label>
                                         <span className="text-[10px] font-mono text-cyan-400 truncate max-w-[150px]">
                                             {effectiveSeverity}

@@ -61,15 +61,15 @@ export const ExportActionGroup: React.FC<ExportActionGroupProps> = ({
 
     return (
         <div className={`flex items-center gap-1.5 ${className}`}>
-            {/* 1. QA Diagnostics Capsule (Stamp Watermark & Specs Inspector) */}
+            {/* 1. System & Device Specs Capsule (Context Banner & Hardware Inspector) */}
             <div className="flex items-center gap-0.5 p-0.5 bg-neutral-800/80 rounded-xl border border-neutral-700/60 shadow-inner">
                 <button
                     type="button"
                     disabled={isBusy}
                     title={
                         includeDiagnosticsStamp
-                            ? "Hardware Specs Watermark: ON (Click to disable)"
-                            : "Hardware Specs Watermark: OFF (Click to enable)"
+                            ? "Device & System Specs Banner: ON (Click to disable)"
+                            : "Device & System Specs Banner: OFF (Click to enable)"
                     }
                     onClick={onToggleDiagnosticsStamp}
                     className={`relative p-1.5 rounded-lg transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
@@ -93,7 +93,7 @@ export const ExportActionGroup: React.FC<ExportActionGroupProps> = ({
                 <button
                     type="button"
                     disabled={isBusy}
-                    title="View Hardware Specs & Display DPI Details (QA)"
+                    title="View System & Hardware Specs Inspector"
                     onClick={onOpenDiagnosticsModal}
                     className="p-1.5 rounded-lg text-neutral-400 hover:text-purple-300 hover:bg-neutral-700/60 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -156,8 +156,8 @@ export const ExportActionGroup: React.FC<ExportActionGroupProps> = ({
                 <IconButton
                     title={
                         flowNodesCount > 0
-                            ? `Jira / GitHub Bug Ticket & Flow (${flowNodesCount} Steps)`
-                            : "Jira / Linear / GitHub Issue Auto-Formatter"
+                            ? `Smart Report & Workflow Guide (${flowNodesCount} Steps)`
+                            : "Smart Report & Documentation Generator"
                     }
                     variant={flowNodesCount > 0 ? "primary" : "secondary"}
                     disabled={isBusy}
@@ -175,7 +175,7 @@ export const ExportActionGroup: React.FC<ExportActionGroupProps> = ({
 
                 {onOpenComparisonModal && (
                     <IconButton
-                        title="Figma vs Live Slicing Comparison (Diff Slider & Overlay)"
+                        title="Design vs Screen Visual Diff (Mockup Comparison Slider)"
                         variant="secondary"
                         disabled={isBusy}
                         onClick={onOpenComparisonModal}
