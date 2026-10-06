@@ -27,10 +27,10 @@ export interface StampPreset {
 }
 
 export const STAMP_PRESETS: StampPreset[] = [
-  // Severity Stamps (🔴 Critical, 🟠 Major, 🟡 Minor)
+  // Priority Badges (🔴 Urgent, 🟠 High, 🟡 Low)
   {
     id: "severity-critical",
-    label: "Critical / Blocker",
+    label: "Urgent / Blocker",
     emoji: "🔴",
     category: "severity",
     badgeColor: "#ef4444",
@@ -38,7 +38,7 @@ export const STAMP_PRESETS: StampPreset[] = [
   },
   {
     id: "severity-major",
-    label: "Major Defect",
+    label: "High Priority",
     emoji: "🟠",
     category: "severity",
     badgeColor: "#f97316",
@@ -46,16 +46,16 @@ export const STAMP_PRESETS: StampPreset[] = [
   },
   {
     id: "severity-minor",
-    label: "Minor / Cosmetic",
+    label: "Low Priority / Note",
     emoji: "🟡",
     category: "severity",
     badgeColor: "#eab308",
     bgColor: "rgba(66, 32, 6, 0.95)",
   },
-  // Issue Categories ([BUG], [UI/CSS GLITCH], [PERF / LAG], [SECURITY], [TYPO])
+  // Callout & Category Badges ([ISSUE], [UI REVIEW], [PERF / SPEED], [SECURITY], [COPY / TYPO])
   {
     id: "category-bug",
-    label: "[BUG]",
+    label: "[ISSUE]",
     emoji: "🐛",
     category: "category",
     badgeColor: "#f43f5e",
@@ -63,7 +63,7 @@ export const STAMP_PRESETS: StampPreset[] = [
   },
   {
     id: "category-ui",
-    label: "[UI/CSS GLITCH]",
+    label: "[UI REVIEW]",
     emoji: "🎨",
     category: "category",
     badgeColor: "#06b6d4",
@@ -71,7 +71,7 @@ export const STAMP_PRESETS: StampPreset[] = [
   },
   {
     id: "category-perf",
-    label: "[PERF / LAG]",
+    label: "[PERF / SPEED]",
     emoji: "⚡",
     category: "category",
     badgeColor: "#f59e0b",
@@ -87,7 +87,7 @@ export const STAMP_PRESETS: StampPreset[] = [
   },
   {
     id: "category-typo",
-    label: "[TYPO]",
+    label: "[COPY / TYPO]",
     emoji: "✏️",
     category: "category",
     badgeColor: "#10b981",

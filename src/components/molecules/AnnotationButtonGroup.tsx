@@ -134,10 +134,10 @@ export const AnnotationButtonGroup: React.FC<AnnotationButtonGroupProps> = ({
                 }
             />
 
-            {/* QA Severity & Issue Tags Stamp */}
+            {/* Priority & Callout Badges Stamp */}
             <div className="relative" ref={stampMenuRef}>
                 <IconButton
-                    title={`QA Severity & Issue Tag Stamp: ${currentStampPreset.emoji} ${currentStampPreset.label} (Click to select)`}
+                    title={`Callout & Priority Stamp: ${currentStampPreset.emoji} ${currentStampPreset.label} (Click to select)`}
                     active={activeTool === "stamp"}
                     activeColor="rose"
                     onClick={() => {
@@ -156,7 +156,7 @@ export const AnnotationButtonGroup: React.FC<AnnotationButtonGroupProps> = ({
                     <div className="absolute top-full left-0 mt-2 p-2 bg-neutral-900/95 backdrop-blur-md border border-neutral-700 rounded-xl shadow-2xl z-50 flex flex-col gap-2 min-w-[210px] animate-in fade-in slide-in-from-top-2 duration-150">
                         <div>
                             <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 px-2 py-0.5">
-                                Severity Level
+                                Priority Level
                             </div>
                             <div className="flex flex-col gap-0.5 mt-0.5">
                                 {STAMP_PRESETS.filter(
@@ -191,7 +191,7 @@ export const AnnotationButtonGroup: React.FC<AnnotationButtonGroupProps> = ({
 
                         <div className="border-t border-neutral-800 pt-1.5">
                             <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 px-2 py-0.5">
-                                Category Tags
+                                Callout Badges
                             </div>
                             <div className="flex flex-col gap-0.5 mt-0.5">
                                 {STAMP_PRESETS.filter(
