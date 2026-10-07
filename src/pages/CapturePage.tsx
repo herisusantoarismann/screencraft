@@ -931,6 +931,7 @@ export const CapturePage: React.FC = () => {
         setActiveNodeId(null);
         resetStepCounter();
         resetFlow();
+        setIsFloatingBarOpen(false);
         await cancelCapture();
     }, [
         cancelCapture,

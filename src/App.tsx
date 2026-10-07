@@ -35,6 +35,27 @@ const App: React.FC = () => {
       .catch((err) => {
         console.warn("[App] Failed to sync autostart status:", err);
       });
+
+    // Proactively warm up Web Audio API AudioContext on window focus or interaction
+    const warmAudio = () => {
+      try {
+        const AudioContextClass =
+          window.AudioContext ||
+          (window as unknown as { webkitAudioContext: typeof AudioContext })
+            .webkitAudioContext;
+        if (AudioContextClass) {
+          const ctx = new AudioContextClass();
+          if (ctx.state === "suspended") {
+            void ctx.resume();
+          }
+        }
+      } catch (_) {}
+    };
+    window.addEventListener("focus", warmAudio);
+    window.addEventListener("pointerdown", warmAudio, { once: true });
+    return () => {
+      window.removeEventListener("focus", warmAudio);
+    };
   }, []);
 
   useEffect(() => {

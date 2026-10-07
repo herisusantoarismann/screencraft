@@ -415,6 +415,7 @@ fn save_file_to_path(target_path: String, base64_data: String) -> Result<SaveRes
 
 #[tauri::command]
 fn close_overlay(window: WebviewWindow) -> Result<(), String> {
+    let _ = window.set_skip_taskbar(true);
     window.hide().map_err(|e| e.to_string())
 }
 
@@ -839,6 +840,21 @@ fn handle_take_screenshot(app: &tauri::AppHandle) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    #[cfg(target_os = "windows")]
+    {
+        let current_args =
+            std::env::var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS").unwrap_or_default();
+        let flag = "--autoplay-policy=no-user-gesture-required";
+        let new_args = if current_args.is_empty() {
+            flag.to_string()
+        } else if !current_args.contains(flag) {
+            format!("{current_args} {flag}")
+        } else {
+            current_args
+        };
+        std::env::set_var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", new_args);
+    }
+
     tauri::Builder::default()
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
@@ -891,6 +907,7 @@ pub fn run() {
         )
         .setup(|app| {
             if let Some(window) = app.get_webview_window("main") {
+                let _ = window.set_skip_taskbar(true);
                 #[cfg(target_os = "windows")]
                 exclude_from_capture(&window);
             }

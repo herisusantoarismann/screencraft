@@ -370,7 +370,7 @@ export const VideoTrimModal: React.FC = () => {
             onClick={() => {
               setIsPreviewOpen(false);
               resetRecording();
-              void invoke("enter_floating_bar_mode");
+              void invoke("close_overlay");
             }}
             className="text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-neutral-800 transition-colors"
             title="Close"
@@ -623,7 +623,7 @@ export const VideoTrimModal: React.FC = () => {
             onClick={() => {
               setIsPreviewOpen(false);
               resetRecording();
-              void invoke("enter_floating_bar_mode");
+              void invoke("close_overlay");
             }}
             disabled={isConverting}
             className="px-3.5 py-1.5 rounded-xl text-xs font-medium text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors disabled:opacity-50"

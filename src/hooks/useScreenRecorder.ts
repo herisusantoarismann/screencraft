@@ -170,10 +170,8 @@ export const useScreenRecorder = () => {
     } catch (err) {
       console.warn("[ScreenRecorder] Screen capture cancelled or failed:", err);
       resetRecording();
-      // If user cancelled screen picker, make sure window returns to floating bar
-      await safeInvoke("enter_floating_bar_mode");
-      // JEDA: Wait 150ms for window to settle back before un-hiding floating bar
-      await new Promise((resolve) => setTimeout(resolve, 150));
+      // If user cancelled screen picker, cleanly close overlay back to tray
+      await safeInvoke("close_overlay");
     } finally {
       isStartingRef.current = false;
       setIsPreparingRecord(false);

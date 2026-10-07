@@ -220,7 +220,7 @@ export const ExportActionGroup: React.FC<ExportActionGroupProps> = ({
 
             {/* 6. Cancel Screenshot */}
             <IconButton
-                title="Cancel Screenshot (Back to Floating Bar - Esc)"
+                title="Cancel Screenshot (Esc)"
                 variant="ghost"
                 disabled={isBusy}
                 onClick={onCancelCapture}

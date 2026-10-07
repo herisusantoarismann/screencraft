@@ -80,7 +80,7 @@ export const useScreenCapture = (): UseScreenCaptureReturn => {
       const message = err instanceof Error ? err.message : String(err);
       console.error("[useScreenCapture] triggerScreenshot error:", message);
       setError(message);
-      await invoke("enter_floating_bar_mode");
+      await invoke("close_overlay");
     } finally {
       setIsCapturing(false);
       setIsTransitioning(false);
@@ -105,9 +105,7 @@ export const useScreenCapture = (): UseScreenCaptureReturn => {
     setCapturedImage(null);
     setError(null);
     try {
-      await invoke("enter_floating_bar_mode");
-      // JEDA: Wait 150ms for window to resize back before un-hiding floating bar
-      await new Promise((resolve) => setTimeout(resolve, 150));
+      await invoke("close_overlay");
     } catch (err) {
       console.error("[useScreenCapture] Cancel capture error:", err);
     } finally {
