@@ -1,17 +1,26 @@
-import React from "react";
-import { Sparkles, X, Keyboard, Shield, Zap } from "lucide-react";
+import { Sparkles, X, Keyboard, Shield, Zap, MessageSquarePlus } from "lucide-react";
 
 export interface AboutModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpenFeedback?: () => void;
 }
 
-export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
+export const AboutModal: React.FC<AboutModalProps> = ({
+  isOpen,
+  onClose,
+  onOpenFeedback,
+}) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm z-50 p-4 select-none animate-in fade-in duration-150">
-      <div className="w-full max-w-md bg-neutral-900 border border-neutral-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col text-white animate-in zoom-in-95 duration-150">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 flex items-center justify-center bg-transparent z-50 p-4 select-none animate-in fade-in duration-150"
+    >
+      <div className="w-full max-w-md bg-neutral-900 border border-neutral-700/80 rounded-2xl shadow-2xl shadow-black/80 overflow-hidden flex flex-col text-white animate-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-neutral-800 bg-neutral-950/60">
           <div className="flex items-center gap-2">
@@ -75,10 +84,23 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
 
         {/* Footer */}
         <div className="flex items-center justify-between px-5 py-3 border-t border-neutral-800 bg-neutral-950/60 text-xs">
-          <span className="text-[11px] text-neutral-500 font-mono flex items-center gap-1">
-            <Shield className="w-3 h-3 text-neutral-500" />
-            100% Local & Privacy-first
-          </span>
+          {onOpenFeedback ? (
+            <button
+              type="button"
+              onClick={() => {
+                onOpenFeedback();
+              }}
+              className="px-3 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-200 hover:text-white font-medium transition-colors flex items-center gap-1.5 cursor-pointer active:scale-95"
+            >
+              <MessageSquarePlus className="w-3.5 h-3.5 text-purple-300" />
+              <span>Send Feedback & Ideas</span>
+            </button>
+          ) : (
+            <span className="text-[11px] text-neutral-500 font-mono flex items-center gap-1">
+              <Shield className="w-3 h-3 text-neutral-500" />
+              100% Local & Privacy-first
+            </span>
+          )}
           <button
             type="button"
             onClick={onClose}

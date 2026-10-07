@@ -4,7 +4,7 @@ use std::str::FromStr;
 use std::sync::Mutex;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
-    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    tray::TrayIconBuilder,
     Emitter, Manager, WebviewWindow,
 };
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
@@ -38,7 +38,10 @@ fn get_system_diagnostics(window: WebviewWindow) -> Result<diagnostics::SystemDi
         scale = Some(monitor.scale_factor());
     }
 
-    Ok(diagnostics::extract_system_diagnostics(res_str.as_deref(), scale))
+    Ok(diagnostics::extract_system_diagnostics(
+        res_str.as_deref(),
+        scale,
+    ))
 }
 
 fn do_capture_screen() -> Result<String, String> {
@@ -101,7 +104,10 @@ fn prepare_for_recording(window: WebviewWindow) -> Result<(), String> {
         let scale = monitor.scale_factor();
         let logical_size = monitor.size().to_logical::<f64>(scale);
         let _ = window.set_position(tauri::LogicalPosition::new(0.0, 0.0));
-        let _ = window.set_size(tauri::LogicalSize::new(logical_size.width, logical_size.height));
+        let _ = window.set_size(tauri::LogicalSize::new(
+            logical_size.width,
+            logical_size.height,
+        ));
     }
     let _ = window.set_always_on_top(false);
     let _ = window.show();
@@ -138,7 +144,10 @@ fn exit_recording_mode(window: WebviewWindow) -> Result<(), String> {
         let scale = monitor.scale_factor();
         let logical_size = monitor.size().to_logical::<f64>(scale);
         let _ = window.set_position(tauri::LogicalPosition::new(0.0, 0.0));
-        let _ = window.set_size(tauri::LogicalSize::new(logical_size.width, logical_size.height));
+        let _ = window.set_size(tauri::LogicalSize::new(
+            logical_size.width,
+            logical_size.height,
+        ));
     }
     let _ = window.set_fullscreen(true);
     let _ = window.set_always_on_top(true);
@@ -175,9 +184,31 @@ fn enter_fullscreen_mode(window: WebviewWindow) -> Result<(), String> {
         let scale = monitor.scale_factor();
         let logical_size = monitor.size().to_logical::<f64>(scale);
         let _ = window.set_position(tauri::LogicalPosition::new(0.0, 0.0));
-        let _ = window.set_size(tauri::LogicalSize::new(logical_size.width, logical_size.height));
+        let _ = window.set_size(tauri::LogicalSize::new(
+            logical_size.width,
+            logical_size.height,
+        ));
     }
     let _ = window.set_fullscreen(true);
+    let _ = window.set_always_on_top(true);
+    let _ = window.show();
+    let _ = window.set_focus();
+    Ok(())
+}
+
+#[tauri::command]
+fn enter_modal_mode(window: WebviewWindow) -> Result<(), String> {
+    let _ = window.set_fullscreen(false);
+    let _ = window.set_resizable(false);
+    if let Ok(Some(monitor)) = window.current_monitor() {
+        let scale = monitor.scale_factor();
+        let logical_size = monitor.size().to_logical::<f64>(scale);
+        let _ = window.set_position(tauri::LogicalPosition::new(0.0, 0.0));
+        let _ = window.set_size(tauri::LogicalSize::new(
+            logical_size.width,
+            logical_size.height,
+        ));
+    }
     let _ = window.set_always_on_top(true);
     let _ = window.show();
     let _ = window.set_focus();
@@ -212,7 +243,10 @@ fn exit_ticket_floater_mode(window: WebviewWindow) -> Result<(), String> {
         let scale = monitor.scale_factor();
         let logical_size = monitor.size().to_logical::<f64>(scale);
         let _ = window.set_position(tauri::LogicalPosition::new(0.0, 0.0));
-        let _ = window.set_size(tauri::LogicalSize::new(logical_size.width, logical_size.height));
+        let _ = window.set_size(tauri::LogicalSize::new(
+            logical_size.width,
+            logical_size.height,
+        ));
     }
     let _ = window.set_fullscreen(true);
     let _ = window.set_always_on_top(true);
@@ -256,8 +290,7 @@ fn save_file_with_dialog(
         .decode(clean_base64)
         .map_err(|e| format!("Failed to decode base64 data: {e}"))?;
 
-    let mut dialog = rfd::FileDialog::new()
-        .set_file_name(&default_name);
+    let mut dialog = rfd::FileDialog::new().set_file_name(&default_name);
 
     if !filter_extension.is_empty() && filter_extension != "*" {
         dialog = dialog.add_filter(&filter_name, &[&filter_extension]);
@@ -303,7 +336,11 @@ fn save_file_with_dialog(
 }
 
 #[tauri::command]
-fn save_file_to_downloads(window: WebviewWindow, file_name: String, base64_data: String) -> Result<String, String> {
+fn save_file_to_downloads(
+    window: WebviewWindow,
+    file_name: String,
+    base64_data: String,
+) -> Result<String, String> {
     let clean_base64 = if let Some(pos) = base64_data.find(',') {
         &base64_data[pos + 1..]
     } else {
@@ -327,7 +364,10 @@ fn save_file_to_downloads(window: WebviewWindow, file_name: String, base64_data:
 }
 
 #[tauri::command]
-fn pick_directory(window: WebviewWindow, default_path: Option<String>) -> Result<Option<String>, String> {
+fn pick_directory(
+    window: WebviewWindow,
+    default_path: Option<String>,
+) -> Result<Option<String>, String> {
     let mut dialog = rfd::FileDialog::new();
     if let Some(ref p) = default_path {
         let path = std::path::Path::new(p);
@@ -380,7 +420,9 @@ fn close_overlay(window: WebviewWindow) -> Result<(), String> {
 
 #[tauri::command]
 fn set_window_always_on_top(window: WebviewWindow, always_on_top: bool) -> Result<(), String> {
-    window.set_always_on_top(always_on_top).map_err(|e| e.to_string())
+    window
+        .set_always_on_top(always_on_top)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -464,8 +506,8 @@ fn copy_to_clipboard(base64_png: String) -> Result<(), String> {
         bytes: std::borrow::Cow::from(rgba.into_raw()),
     };
 
-    let mut clipboard = arboard::Clipboard::new()
-        .map_err(|e| format!("Failed to initialize clipboard: {e}"))?;
+    let mut clipboard =
+        arboard::Clipboard::new().map_err(|e| format!("Failed to initialize clipboard: {e}"))?;
     clipboard
         .set_image(image_data)
         .map_err(|e| format!("Failed to set image to clipboard: {e}"))?;
@@ -505,7 +547,10 @@ async fn send_slack_webhook(webhook_url: String, message_text: String) -> Result
     let status = res.status();
     if !status.is_success() {
         let err_body = res.text().await.unwrap_or_default();
-        return Err(format!("Slack webhook returned error status ({}): {}", status, err_body));
+        return Err(format!(
+            "Slack webhook returned error status ({}): {}",
+            status, err_body
+        ));
     }
 
     Ok(())
@@ -553,7 +598,220 @@ async fn send_discord_webhook(
     let status = res.status();
     if !status.is_success() {
         let err_body = res.text().await.unwrap_or_default();
-        return Err(format!("Discord webhook returned error status ({}): {}", status, err_body));
+        return Err(format!(
+            "Discord webhook returned error status ({}): {}",
+            status, err_body
+        ));
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn send_discord_error_report(
+    webhook_url: String,
+    error_type: String,
+    message: String,
+    stack: Option<String>,
+    component_stack: Option<String>,
+    app_version: Option<String>,
+) -> Result<(), String> {
+    if webhook_url.trim().is_empty() {
+        return Err("Discord webhook URL is empty".to_string());
+    }
+
+    let version_str = app_version.unwrap_or_else(|| "1.0.0".to_string());
+
+    // Truncate fields to comply with Discord limits (1024 chars max per field)
+    let truncated_msg = if message.len() > 950 {
+        format!("{}... [truncated]", &message[..950])
+    } else {
+        message
+    };
+
+    let mut fields = vec![
+        serde_json::json!({
+            "name": "Error Type",
+            "value": format!("`{}`", error_type),
+            "inline": true
+        }),
+        serde_json::json!({
+            "name": "Version",
+            "value": format!("`v{}`", version_str),
+            "inline": true
+        }),
+        serde_json::json!({
+            "name": "Message",
+            "value": format!("```\n{}\n```", truncated_msg),
+            "inline": false
+        }),
+    ];
+
+    if let Some(st) = stack {
+        if !st.trim().is_empty() {
+            let truncated_st = if st.len() > 950 {
+                format!("{}... [truncated]", &st[..950])
+            } else {
+                st
+            };
+            fields.push(serde_json::json!({
+                "name": "Stack Trace",
+                "value": format!("```\n{}\n```", truncated_st),
+                "inline": false
+            }));
+        }
+    }
+
+    if let Some(cs) = component_stack {
+        if !cs.trim().is_empty() {
+            let truncated_cs = if cs.len() > 950 {
+                format!("{}... [truncated]", &cs[..950])
+            } else {
+                cs
+            };
+            fields.push(serde_json::json!({
+                "name": "Component Stack",
+                "value": format!("```\n{}\n```", truncated_cs),
+                "inline": false
+            }));
+        }
+    }
+
+    let payload = serde_json::json!({
+        "username": "ScreenCraft Crash Reporter",
+        "embeds": [{
+            "title": "🚨 ScreenCraft Error Report",
+            "color": 15548997, // #ED4245 (Red)
+            "fields": fields,
+            "footer": {
+                "text": "ScreenCraft Diagnostic Telemetry"
+            }
+        }]
+    });
+
+    let client = reqwest::Client::new();
+    let res = client
+        .post(webhook_url.trim())
+        .json(&payload)
+        .send()
+        .await
+        .map_err(|e| format!("Network error sending error report to Discord: {e}"))?;
+
+    let status = res.status();
+    if !status.is_success() {
+        let err_body = res.text().await.unwrap_or_default();
+        return Err(format!(
+            "Discord webhook returned error status ({}): {}",
+            status, err_body
+        ));
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn send_discord_feedback(
+    webhook_url: String,
+    category: String,
+    message: String,
+    user_email: Option<String>,
+    app_version: Option<String>,
+    system_specs: Option<String>,
+) -> Result<(), String> {
+    if webhook_url.trim().is_empty() {
+        return Err("Discord webhook URL is empty".to_string());
+    }
+
+    let version_str = app_version.unwrap_or_else(|| "1.0.0".to_string());
+    let category_clean = category.trim();
+
+    let (title, color) = match category_clean {
+        "bug" => ("🐞 ScreenCraft Bug Report", 15548997),             // Red
+        "feature" => ("💡 ScreenCraft Feature Request", 16753920),    // Amber
+        _ => ("💬 ScreenCraft User Feedback", 10181046),              // Purple
+    };
+
+    let mut fields = vec![
+        serde_json::json!({
+            "name": "Category",
+            "value": format!("`{}`", match category_clean {
+                "bug" => "Bug Report",
+                "feature" => "Feature Request",
+                _ => "General Feedback",
+            }),
+            "inline": true
+        }),
+        serde_json::json!({
+            "name": "App Version",
+            "value": format!("`v{}`", version_str),
+            "inline": true
+        }),
+    ];
+
+    if let Some(email) = user_email {
+        if !email.trim().is_empty() {
+            fields.push(serde_json::json!({
+                "name": "Contact Email",
+                "value": format!("`{}`", email.trim()),
+                "inline": true
+            }));
+        }
+    }
+
+    let truncated_msg = if message.len() > 1000 {
+        format!("{}... [truncated]", &message[..1000])
+    } else {
+        message
+    };
+
+    fields.push(serde_json::json!({
+        "name": "User Message",
+        "value": format!("```\n{}\n```", truncated_msg),
+        "inline": false
+    }));
+
+    if let Some(specs) = system_specs {
+        if !specs.trim().is_empty() {
+            let truncated_specs = if specs.len() > 1000 {
+                format!("{}... [truncated]", &specs[..1000])
+            } else {
+                specs
+            };
+            fields.push(serde_json::json!({
+                "name": "System Context",
+                "value": format!("```yaml\n{}\n```", truncated_specs),
+                "inline": false
+            }));
+        }
+    }
+
+    let payload = serde_json::json!({
+        "username": "ScreenCraft Feedback Mailbox",
+        "embeds": [{
+            "title": title,
+            "color": color,
+            "fields": fields,
+            "footer": {
+                "text": "ScreenCraft Community & User Mailbox"
+            }
+        }]
+    });
+
+    let client = reqwest::Client::new();
+    let res = client
+        .post(webhook_url.trim())
+        .json(&payload)
+        .send()
+        .await
+        .map_err(|e| format!("Network error sending feedback to Discord: {e}"))?;
+
+    let status = res.status();
+    if !status.is_success() {
+        let err_body = res.text().await.unwrap_or_default();
+        return Err(format!(
+            "Discord webhook returned error status ({}): {}",
+            status, err_body
+        ));
     }
 
     Ok(())
@@ -582,6 +840,10 @@ fn handle_take_screenshot(app: &tauri::AppHandle) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            Some(vec!["--minimized"]),
+        ))
         .manage(HotkeyState::default())
         .plugin(tauri_plugin_opener::init())
         .plugin(
@@ -650,12 +912,34 @@ pub fn run() {
             }
 
             // System Tray Menu items
-            let show_floating_item = MenuItem::with_id(app, "show_floating", "Show Floating", true, None::<&str>)?;
-            let take_screenshot_item = MenuItem::with_id(app, "take_screenshot", "Take Screenshot (Ctrl+Shift+S)", true, None::<&str>)?;
-            let record_screen_item = MenuItem::with_id(app, "record_screen", "Record Screen", true, None::<&str>)?;
+            let show_floating_item =
+                MenuItem::with_id(app, "show_floating", "Show Floating", true, None::<&str>)?;
+            let take_screenshot_item = MenuItem::with_id(
+                app,
+                "take_screenshot",
+                "Take Screenshot (Ctrl+Shift+S)",
+                true,
+                None::<&str>,
+            )?;
+            let record_screen_item =
+                MenuItem::with_id(app, "record_screen", "Record Screen", true, None::<&str>)?;
             let separator1 = PredefinedMenuItem::separator(app)?;
-            let settings_item = MenuItem::with_id(app, "settings", "Settings / Preferences", true, None::<&str>)?;
-            let about_item = MenuItem::with_id(app, "about", "About ScreenCraft", true, None::<&str>)?;
+            let settings_item = MenuItem::with_id(
+                app,
+                "settings",
+                "Settings / Preferences",
+                true,
+                None::<&str>,
+            )?;
+            let feedback_item = MenuItem::with_id(
+                app,
+                "feedback",
+                "Feedback & Ideas...",
+                true,
+                None::<&str>,
+            )?;
+            let about_item =
+                MenuItem::with_id(app, "about", "About ScreenCraft", true, None::<&str>)?;
             let separator2 = PredefinedMenuItem::separator(app)?;
             let exit_item = MenuItem::with_id(app, "exit", "Exit", true, None::<&str>)?;
 
@@ -667,6 +951,7 @@ pub fn run() {
                     &record_screen_item,
                     &separator1,
                     &settings_item,
+                    &feedback_item,
                     &about_item,
                     &separator2,
                     &exit_item,
@@ -677,56 +962,47 @@ pub fn run() {
                 .tooltip("ScreenCraft")
                 .title("ScreenCraft")
                 .menu(&tray_menu)
-                .show_menu_on_left_click(false)
-                .on_menu_event(move |app, event| {
-                    match event.id().as_ref() {
-                        "show_floating" => {
-                            if let Some(window) = app.get_webview_window("main") {
-                                let _ = enter_floating_bar_mode(window.clone());
-                                let _ = app.emit("open-floating-bar", ());
-                                let _ = app.emit("tray-show-floating", ());
-                            }
+                .show_menu_on_left_click(true)
+                .on_menu_event(move |app, event| match event.id().as_ref() {
+                    "show_floating" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = enter_floating_bar_mode(window.clone());
+                            let _ = app.emit("open-floating-bar", ());
+                            let _ = app.emit("tray-show-floating", ());
                         }
-                        "take_screenshot" => {
-                            handle_take_screenshot(app);
-                        }
-                        "record_screen" => {
-                            if let Some(window) = app.get_webview_window("main") {
-                                let _ = window.show();
-                                let _ = window.set_focus();
-                                let _ = app.emit("trigger-record", ());
-                            }
-                        }
-                        "settings" => {
-                            if let Some(window) = app.get_webview_window("main") {
-                                let _ = window.show();
-                                let _ = window.set_focus();
-                                let _ = app.emit("open-settings", ());
-                            }
-                        }
-                        "about" => {
-                            if let Some(window) = app.get_webview_window("main") {
-                                let _ = window.show();
-                                let _ = window.set_focus();
-                                let _ = app.emit("open-about", ());
-                            }
-                        }
-                        "exit" => {
-                            app.exit(0);
-                        }
-                        _ => {}
                     }
-                })
-                .on_tray_icon_event(move |tray, event| {
-                    if let TrayIconEvent::Click {
-                        button: MouseButton::Left,
-                        button_state: MouseButtonState::Up,
-                        ..
-                    } = event
-                    {
-                        let app = tray.app_handle();
+                    "take_screenshot" => {
                         handle_take_screenshot(app);
                     }
+                    "record_screen" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                            let _ = app.emit("trigger-record", ());
+                        }
+                    }
+                    "settings" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = enter_modal_mode(window.clone());
+                            let _ = app.emit("open-settings", ());
+                        }
+                    }
+                    "feedback" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = enter_modal_mode(window.clone());
+                            let _ = app.emit("open-feedback", ());
+                        }
+                    }
+                    "about" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = enter_modal_mode(window.clone());
+                            let _ = app.emit("open-about", ());
+                        }
+                    }
+                    "exit" => {
+                        app.exit(0);
+                    }
+                    _ => {}
                 });
 
             if let Some(icon) = app.default_window_icon() {
@@ -747,6 +1023,7 @@ pub fn run() {
             exit_recording_mode,
             enter_floating_bar_mode,
             enter_fullscreen_mode,
+            enter_modal_mode,
             enter_ticket_floater_mode,
             exit_ticket_floater_mode,
             trigger_screenshot,
@@ -756,6 +1033,8 @@ pub fn run() {
             pick_directory,
             send_slack_webhook,
             send_discord_webhook,
+            send_discord_error_report,
+            send_discord_feedback,
             get_system_diagnostics,
             disable_global_shortcuts,
             register_global_shortcut,

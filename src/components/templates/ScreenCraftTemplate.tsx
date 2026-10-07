@@ -4,6 +4,7 @@ import type Konva from "konva";
 import type { ToolType } from "../../stores/toolStore";
 import type { FlowNode } from "../../stores/flowStore";
 import { exportFlowToMarkdown } from "../../stores/flowStore";
+import { useSettingsStore } from "../../stores/settingsStore";
 import type {
   Annotation,
   CropArea,
@@ -70,6 +71,10 @@ export interface ScreenCraftTemplateProps {
   isWebhookModalOpen: boolean;
   isDiagnosticsModalOpen: boolean;
   isComparisonModalOpen?: boolean;
+  isAboutModalOpen?: boolean;
+  isFeedbackModalOpen?: boolean;
+  isFloatingBarOpen?: boolean;
+  onCloseFloatingBar?: () => void;
   includeDiagnosticsStamp: boolean;
   diagnostics: SystemDiagnostics | null;
   ripples: ClickRipple[];
@@ -147,6 +152,10 @@ export const ScreenCraftTemplate: React.FC<ScreenCraftTemplateProps> = ({
   isWebhookModalOpen,
   isDiagnosticsModalOpen,
   isComparisonModalOpen,
+  isAboutModalOpen,
+  isFeedbackModalOpen,
+  isFloatingBarOpen,
+  onCloseFloatingBar,
   includeDiagnosticsStamp,
   diagnostics,
   ripples,
@@ -189,6 +198,16 @@ export const ScreenCraftTemplate: React.FC<ScreenCraftTemplateProps> = ({
   onGetImageDataUrlOrBlob,
 }) => {
   const [isFloaterActive, setIsFloaterActive] = useState(false);
+  const isSettingsOpen = useSettingsStore((state) => state.isSettingsOpen);
+
+  const isAnyModalActive =
+    isSettingsOpen ||
+    Boolean(isAboutModalOpen) ||
+    Boolean(isFeedbackModalOpen) ||
+    isMarkdownModalOpen ||
+    isWebhookModalOpen ||
+    isDiagnosticsModalOpen ||
+    Boolean(isComparisonModalOpen);
 
   // Dedicated mini floater mode when QA ticket modal is minimized to floater
   if (isFloaterActive && isMarkdownModalOpen) {
@@ -228,20 +247,23 @@ export const ScreenCraftTemplate: React.FC<ScreenCraftTemplateProps> = ({
       ref={containerRef}
       className="relative w-screen h-screen overflow-hidden select-none bg-transparent"
     >
-      {/* 1. Standby Floating Bar (when NOT frozen and NOT previewing video) */}
-      {!capturedImage && !isPreviewOpen && (
+      {/* 1. Standby Floating Bar (ONLY when explicitly active, NOT frozen, and NO modal is active) */}
+      {isFloatingBarOpen && !capturedImage && !isPreviewOpen && !isAnyModalActive && (
         <StandbyFloatingBar
           isCapturing={isCapturing}
           isTransitioning={isTransitioning}
           isPreparingRecord={isPreparingRecord}
           onTriggerScreenshot={onTriggerScreenshot}
           onStartRecording={onStartRecording}
-          onCloseOverlay={onCloseOverlay}
+          onCloseOverlay={() => {
+            onCloseFloatingBar?.();
+            onCloseOverlay();
+          }}
         />
       )}
 
-      {/* 2. Floating HUD Toolbar (when screen is frozen with captured image) */}
-      {capturedImage && (
+      {/* 2. Floating HUD Toolbar (when screen is frozen with captured image AND no modal is active) */}
+      {capturedImage && !isAnyModalActive && (
         <CanvasToolbar
           activeTool={activeTool}
           strokeColor={strokeColor}

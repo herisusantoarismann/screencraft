@@ -30,7 +30,7 @@ import {
     formatNamingPattern,
 } from "../services/fileSaveService";
 import { ScreenCraftTemplate } from "../components/templates";
-import { AboutModal } from "../components/organisms";
+import { AboutModal, FeedbackModal } from "../components/organisms";
 
 export const CapturePage: React.FC = () => {
     const {
@@ -158,6 +158,9 @@ export const CapturePage: React.FC = () => {
     const [isComparisonModalOpen, setIsComparisonModalOpen] =
         useState<boolean>(false);
     const [isAboutModalOpen, setIsAboutModalOpen] = useState<boolean>(false);
+    const [isFeedbackModalOpen, setIsFeedbackModalOpen] =
+        useState<boolean>(false);
+    const [isFloatingBarOpen, setIsFloatingBarOpen] = useState<boolean>(false);
     const [includeDiagnosticsStamp, setIncludeDiagnosticsStamp] =
         useState<boolean>(
             () => useSettingsStore.getState().attachSpecsWatermark,
@@ -881,12 +884,33 @@ export const CapturePage: React.FC = () => {
         setActiveNodeId,
     ]);
 
-    // Close modal handlers (return window to floating HUD bar mode if not in capture mode)
+    // Close modal handlers (minimize/hide window cleanly to tray if not in capture mode)
     const handleCloseAboutModal = useCallback(async () => {
-        setIsAboutModalOpen(false);
         if (!capturedImage) {
-            await invoke("enter_floating_bar_mode");
+            try {
+                await invoke("close_overlay");
+            } catch (err) {
+                console.warn(
+                    "[CapturePage] Failed to close overlay to tray:",
+                    err,
+                );
+            }
         }
+        setIsAboutModalOpen(false);
+    }, [capturedImage]);
+
+    const handleCloseFeedbackModal = useCallback(async () => {
+        if (!capturedImage) {
+            try {
+                await invoke("close_overlay");
+            } catch (err) {
+                console.warn(
+                    "[CapturePage] Failed to close overlay to tray:",
+                    err,
+                );
+            }
+        }
+        setIsFeedbackModalOpen(false);
     }, [capturedImage]);
 
     // Keep hasActiveScreenshot synchronized in settingsStore
@@ -925,8 +949,9 @@ export const CapturePage: React.FC = () => {
                 }
 
                 const uAbout = await listen("open-about", async () => {
+                    setIsFloatingBarOpen(false);
                     if (!capturedImageRef.current) {
-                        await invoke("enter_fullscreen_mode");
+                        await invoke("enter_modal_mode");
                     }
                     setIsAboutModalOpen(true);
                 });
@@ -936,6 +961,19 @@ export const CapturePage: React.FC = () => {
                     unlistenFns.push(uAbout);
                 }
 
+                const uFeedback = await listen("open-feedback", async () => {
+                    setIsFloatingBarOpen(false);
+                    if (!capturedImageRef.current) {
+                        await invoke("enter_modal_mode");
+                    }
+                    setIsFeedbackModalOpen(true);
+                });
+                if (isCancelled) {
+                    uFeedback();
+                } else {
+                    unlistenFns.push(uFeedback);
+                }
+
                 const uTrayFloating = await listen(
                     "tray-show-floating",
                     async () => {
@@ -943,13 +981,33 @@ export const CapturePage: React.FC = () => {
                             await handleFullCancelCaptureRef.current();
                         }
                         setIsAboutModalOpen(false);
+                        setIsFeedbackModalOpen(false);
                         useSettingsStore.getState().setIsSettingsOpen(false);
+                        setIsFloatingBarOpen(true);
                     },
                 );
                 if (isCancelled) {
                     uTrayFloating();
                 } else {
                     unlistenFns.push(uTrayFloating);
+                }
+
+                const uOpenFloating = await listen(
+                    "open-floating-bar",
+                    async () => {
+                        if (capturedImageRef.current) {
+                            await handleFullCancelCaptureRef.current();
+                        }
+                        setIsAboutModalOpen(false);
+                        setIsFeedbackModalOpen(false);
+                        useSettingsStore.getState().setIsSettingsOpen(false);
+                        setIsFloatingBarOpen(true);
+                    },
+                );
+                if (isCancelled) {
+                    uOpenFloating();
+                } else {
+                    unlistenFns.push(uOpenFloating);
                 }
             } catch (err) {
                 console.error(
@@ -969,13 +1027,14 @@ export const CapturePage: React.FC = () => {
 
     // Modal Escape key listener with capturing phase for instant precedence
     useEffect(() => {
-        if (!isAboutModalOpen) return;
+        if (!isAboutModalOpen && !isFeedbackModalOpen) return;
 
         const handleModalEsc = (e: KeyboardEvent) => {
             if (e.key === "Escape") {
                 e.preventDefault();
                 e.stopImmediatePropagation();
                 if (isAboutModalOpen) void handleCloseAboutModal();
+                if (isFeedbackModalOpen) void handleCloseFeedbackModal();
             }
         };
 
@@ -984,7 +1043,12 @@ export const CapturePage: React.FC = () => {
             window.removeEventListener("keydown", handleModalEsc, {
                 capture: true,
             });
-    }, [isAboutModalOpen, handleCloseAboutModal]);
+    }, [
+        isAboutModalOpen,
+        isFeedbackModalOpen,
+        handleCloseAboutModal,
+        handleCloseFeedbackModal,
+    ]);
 
     // Auto-copy to clipboard on capture if enabled in settings
     useEffect(() => {
@@ -1101,6 +1165,10 @@ export const CapturePage: React.FC = () => {
                 isWebhookModalOpen={isWebhookModalOpen}
                 isDiagnosticsModalOpen={isDiagnosticsModalOpen}
                 isComparisonModalOpen={isComparisonModalOpen}
+                isAboutModalOpen={isAboutModalOpen}
+                isFeedbackModalOpen={isFeedbackModalOpen}
+                isFloatingBarOpen={isFloatingBarOpen}
+                onCloseFloatingBar={() => setIsFloatingBarOpen(false)}
                 includeDiagnosticsStamp={includeDiagnosticsStamp}
                 diagnostics={diagnostics}
                 ripples={ripples}
@@ -1111,10 +1179,19 @@ export const CapturePage: React.FC = () => {
                 isDownloading={isDownloading}
                 downloadSuccess={downloadSuccess}
                 downloadToast={downloadToast}
-                onTriggerScreenshot={() => void triggerScreenshot()}
-                onStartRecording={() => void startRecording()}
+                onTriggerScreenshot={() => {
+                    setIsFloatingBarOpen(false);
+                    void triggerScreenshot();
+                }}
+                onStartRecording={() => {
+                    setIsFloatingBarOpen(false);
+                    void startRecording();
+                }}
                 onStopRecording={() => void stopRecording()}
-                onCloseOverlay={() => void closeOverlay()}
+                onCloseOverlay={() => {
+                    setIsFloatingBarOpen(false);
+                    void closeOverlay();
+                }}
                 onSelectTool={setActiveTool}
                 onSelectColor={setStrokeColor}
                 onCopy={() => void handleCopyToClipboard()}
@@ -1161,6 +1238,16 @@ export const CapturePage: React.FC = () => {
             <AboutModal
                 isOpen={isAboutModalOpen}
                 onClose={() => void handleCloseAboutModal()}
+                onOpenFeedback={() => {
+                    setIsAboutModalOpen(false);
+                    setIsFeedbackModalOpen(true);
+                }}
+            />
+
+            {/* System Tray & About Feedback Modal */}
+            <FeedbackModal
+                isOpen={isFeedbackModalOpen}
+                onClose={() => void handleCloseFeedbackModal()}
             />
         </>
     );

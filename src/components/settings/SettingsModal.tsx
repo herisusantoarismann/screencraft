@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useSettingsStore, DEFAULT_SETTINGS } from "../../stores/settingsStore";
 import { invoke } from "@tauri-apps/api/core";
+import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 
 export interface SettingsModalProps {
     isOpen?: boolean;
@@ -142,6 +143,47 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         [],
     );
 
+    // Synchronize autostart with operating system state when modal opens
+    useEffect(() => {
+        if (!isSettingsOpen) return;
+        let isMounted = true;
+        isEnabled()
+            .then((enabled) => {
+                if (isMounted) {
+                    setLaunchOnStartup(enabled);
+                }
+            })
+            .catch((err) => {
+                console.warn(
+                    "[SettingsModal] Failed to query autostart status:",
+                    err,
+                );
+            });
+        return () => {
+            isMounted = false;
+        };
+    }, [isSettingsOpen, setLaunchOnStartup]);
+
+    const handleToggleLaunchOnStartup = useCallback(
+        async (checked: boolean) => {
+            try {
+                if (checked) {
+                    await enable();
+                } else {
+                    await disable();
+                }
+                setLaunchOnStartup(checked);
+            } catch (err) {
+                console.error(
+                    "[SettingsModal] Failed to toggle autostart:",
+                    err,
+                );
+                setLaunchOnStartup(checked);
+            }
+        },
+        [setLaunchOnStartup],
+    );
+
     // Manage window always_on_top so user can freely switch tabs/apps when settings is open
     useEffect(() => {
         if (isSettingsOpen) {
@@ -158,13 +200,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
     // Close handler minimizing/hiding window cleanly to tray if not in active screenshot
     const handleClose = useCallback(async () => {
-        if (propOnClose) {
-            propOnClose();
-        } else {
-            setIsSettingsOpen(false);
-        }
-        setRecordingHotkeyFor(null);
-        setShowResetConfirm(false);
         if (!hasActiveScreenshot) {
             try {
                 await invoke("close_overlay");
@@ -184,6 +219,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 );
             }
         }
+        if (propOnClose) {
+            propOnClose();
+        } else {
+            setIsSettingsOpen(false);
+        }
+        setRecordingHotkeyFor(null);
+        setShowResetConfirm(false);
     }, [hasActiveScreenshot, setIsSettingsOpen, propOnClose]);
 
     // Disable global OS shortcuts while Settings is open so keys aren't swallowed by OS
@@ -407,12 +449,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md select-none"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-transparent select-none animate-in fade-in duration-150"
             onClick={(e) => {
                 if (e.target === e.currentTarget) void handleClose();
             }}
         >
-            <div className="w-[720px] min-w-[720px] max-w-[720px] h-[580px] min-h-[580px] max-h-[580px] bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden text-neutral-100">
+            <div className="w-[720px] min-w-[720px] max-w-[720px] h-[580px] min-h-[580px] max-h-[580px] bg-neutral-900 border border-neutral-700/80 rounded-2xl shadow-2xl shadow-black/80 flex flex-col overflow-hidden text-neutral-100 animate-in zoom-in-95 duration-150">
                 {/* Modal Header - Fixed height */}
                 <div className="h-[72px] min-h-[72px] max-h-[72px] shrink-0 flex items-center justify-between px-6 border-b border-neutral-800 bg-neutral-950/70">
                     <div className="flex items-center gap-3">
@@ -644,7 +686,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                             type="checkbox"
                                             checked={launchOnStartup}
                                             onChange={(e) =>
-                                                setLaunchOnStartup(
+                                                void handleToggleLaunchOnStartup(
                                                     e.target.checked,
                                                 )
                                             }
@@ -1088,6 +1130,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                     onClick={() => {
                                         resetToDefaults();
                                         setShowResetConfirm(false);
+                                        disable().catch(() => {});
                                         syncHotkeysToBackend(
                                             DEFAULT_SETTINGS.screenshotHotkey,
                                             DEFAULT_SETTINGS.recordHotkey,

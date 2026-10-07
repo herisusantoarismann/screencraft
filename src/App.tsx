@@ -4,15 +4,16 @@ import { SettingsModal } from "./components/settings";
 import { useSettingsStore } from "./stores/settingsStore";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
+import { isEnabled, enable, disable } from "@tauri-apps/plugin-autostart";
 import "./App.css";
 
 const App: React.FC = () => {
   const isSettingsOpen = useSettingsStore((state) => state.isSettingsOpen);
   const setIsSettingsOpen = useSettingsStore((state) => state.setIsSettingsOpen);
 
-  // Apply persisted global hotkeys on application launch
+  // Apply persisted global hotkeys and sync autostart on application launch
   useEffect(() => {
-    const { screenshotHotkey, recordHotkey, floatingBarHotkey } =
+    const { screenshotHotkey, recordHotkey, floatingBarHotkey, launchOnStartup } =
       useSettingsStore.getState();
     invoke("apply_hotkeys", {
       screenshot: screenshotHotkey,
@@ -21,6 +22,19 @@ const App: React.FC = () => {
     }).catch((err) => {
       console.warn("[App] Failed to apply startup hotkeys:", err);
     });
+
+    // Ensure OS autostart matches persisted user setting
+    isEnabled()
+      .then(async (currentlyEnabled) => {
+        if (launchOnStartup && !currentlyEnabled) {
+          await enable();
+        } else if (!launchOnStartup && currentlyEnabled) {
+          await disable();
+        }
+      })
+      .catch((err) => {
+        console.warn("[App] Failed to sync autostart status:", err);
+      });
   }, []);
 
   useEffect(() => {
@@ -31,7 +45,7 @@ const App: React.FC = () => {
           const hasScreenshot = useSettingsStore.getState().hasActiveScreenshot;
           if (!hasScreenshot) {
             try {
-              await invoke("enter_fullscreen_mode");
+              await invoke("enter_modal_mode");
             } catch (err) {
               console.warn("[App] Failed to expand for settings:", err);
             }
