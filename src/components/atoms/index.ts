@@ -5,3 +5,4 @@ export * from "./Badge";
 export * from "./IconButton";
 export * from "./ShutterFlash";
 export * from "./RippleEffect";
+export * from "./ScreenFrameGlow";

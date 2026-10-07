@@ -29,7 +29,7 @@ import {
   VisualComparisonModal,
 } from "../organisms";
 import { EyedropperLoupe, OcrIndicator, Toast } from "../molecules";
-import { ShutterFlash, RippleEffect } from "../atoms";
+import { ShutterFlash, RippleEffect, ScreenFrameGlow } from "../atoms";
 import type { SystemDiagnostics } from "../../types/diagnostics";
 
 export interface ScreenCraftTemplateProps {
@@ -308,6 +308,9 @@ export const ScreenCraftTemplate: React.FC<ScreenCraftTemplateProps> = ({
           onCancelCapture={onCancelCapture}
         />
       )}
+
+      {/* Screen Frame Glow & Viewfinder (Visual cue for screen freeze / canvas mode) */}
+      {capturedImage && !isAnyModalActive && <ScreenFrameGlow />}
 
       {/* Helper Notification if error occurred */}
       <Toast

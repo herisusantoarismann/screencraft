@@ -263,12 +263,12 @@ export const KonvaStageCanvas: React.FC<KonvaStageCanvasProps> = ({
   // Cursor selector
   const getCursor = () => {
     switch (activeTool) {
-      case "select":
       case "spotlight":
         return "default";
       case "stepBadge":
       case "stamp":
         return "pointer";
+      case "select":
       case "blur":
       case "flowBuilder":
       case "laser":
