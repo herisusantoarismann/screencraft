@@ -20,49 +20,109 @@ function getAudioContext(): AudioContext | null {
 
 function playShutterOnContext(ctx: AudioContext): void {
     const now = ctx.currentTime;
-
-    // 1. White noise burst through bandpass filter for mechanical shutter texture
     const sampleRate = ctx.sampleRate;
-    const bufferSize = Math.floor(sampleRate * 0.04);
-    const noiseBuffer = ctx.createBuffer(1, bufferSize, sampleRate);
-    const output = noiseBuffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-        output[i] = Math.random() * 2 - 1;
-    }
 
-    const whiteNoise = ctx.createBufferSource();
-    whiteNoise.buffer = noiseBuffer;
+    // Helper: generate white noise buffer
+    const createNoiseBuffer = (durationSec: number) => {
+        const bufferSize = Math.floor(sampleRate * durationSec);
+        const noiseBuffer = ctx.createBuffer(1, bufferSize, sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            output[i] = Math.random() * 2 - 1;
+        }
+        return noiseBuffer;
+    };
 
-    const filter = ctx.createBiquadFilter();
-    filter.type = "bandpass";
-    filter.frequency.setValueAtTime(1400, now);
-    filter.Q.setValueAtTime(2.5, now);
+    const noiseBuffer = createNoiseBuffer(0.12);
 
-    const noiseGain = ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.38, now);
-    noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.038);
+    // ==========================================
+    // Phase 1: Shutter Blade Open ("tcha-")
+    // ==========================================
+    const t1 = now;
 
-    whiteNoise.connect(filter);
-    filter.connect(noiseGain);
-    noiseGain.connect(ctx.destination);
-    whiteNoise.start(now);
+    // 1a. High-frequency crisp metallic snap
+    const noise1 = ctx.createBufferSource();
+    noise1.buffer = noiseBuffer;
+    const filter1 = ctx.createBiquadFilter();
+    filter1.type = "highpass";
+    filter1.frequency.setValueAtTime(2800, t1);
 
-    // 2. High-frequency impulse click
-    const clickOsc = ctx.createOscillator();
-    const clickGain = ctx.createGain();
-    clickOsc.type = "sine";
-    clickOsc.frequency.setValueAtTime(2400, now);
-    clickOsc.frequency.exponentialRampToValueAtTime(300, now + 0.035);
+    const gain1 = ctx.createGain();
+    gain1.gain.setValueAtTime(0.35, t1);
+    gain1.gain.exponentialRampToValueAtTime(0.001, t1 + 0.022);
 
-    clickGain.gain.setValueAtTime(0.30, now);
-    clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.035);
+    noise1.connect(filter1);
+    filter1.connect(gain1);
+    gain1.connect(ctx.destination);
+    noise1.start(t1);
+    noise1.stop(t1 + 0.025);
 
-    clickOsc.connect(clickGain);
-    clickGain.connect(ctx.destination);
+    // 1b. Blade release transient click
+    const osc1 = ctx.createOscillator();
+    const oscGain1 = ctx.createGain();
+    osc1.type = "sine";
+    osc1.frequency.setValueAtTime(2200, t1);
+    osc1.frequency.exponentialRampToValueAtTime(450, t1 + 0.015);
+    oscGain1.gain.setValueAtTime(0.25, t1);
+    oscGain1.gain.exponentialRampToValueAtTime(0.001, t1 + 0.015);
+    osc1.connect(oscGain1);
+    oscGain1.connect(ctx.destination);
+    osc1.start(t1);
+    osc1.stop(t1 + 0.018);
 
-    clickOsc.start(now);
-    clickOsc.stop(now + 0.038);
+    // ==========================================
+    // Phase 2: Curtain Close & Chassis Slap ("-clik")
+    // 32ms exposure gap for authentic two-part shutter rhythm
+    // ==========================================
+    const t2 = now + 0.032;
+
+    // 2a. Camera body acoustic thud (gives real camera weight/chassis resonance)
+    const bodyOsc = ctx.createOscillator();
+    const bodyGain = ctx.createGain();
+    bodyOsc.type = "triangle";
+    bodyOsc.frequency.setValueAtTime(180, t2);
+    bodyOsc.frequency.exponentialRampToValueAtTime(60, t2 + 0.045);
+    bodyGain.gain.setValueAtTime(0.3, t2);
+    bodyGain.gain.exponentialRampToValueAtTime(0.001, t2 + 0.045);
+    bodyOsc.connect(bodyGain);
+    bodyGain.connect(ctx.destination);
+    bodyOsc.start(t2);
+    bodyOsc.stop(t2 + 0.05);
+
+    // 2b. Shutter curtain crunch (textured bandpass noise)
+    const noise2 = ctx.createBufferSource();
+    noise2.buffer = noiseBuffer;
+    const filter2 = ctx.createBiquadFilter();
+    filter2.type = "bandpass";
+    filter2.frequency.setValueAtTime(1600, t2);
+    filter2.Q.setValueAtTime(1.8, t2);
+
+    const gain2 = ctx.createGain();
+    gain2.gain.setValueAtTime(0.42, t2);
+    gain2.gain.exponentialRampToValueAtTime(0.005, t2 + 0.042);
+
+    noise2.connect(filter2);
+    filter2.connect(gain2);
+    gain2.connect(ctx.destination);
+    noise2.start(t2);
+    noise2.stop(t2 + 0.048);
+
+    // 2c. Sharp metallic latch click (closing latch)
+    const osc2 = ctx.createOscillator();
+    const oscGain2 = ctx.createGain();
+    osc2.type = "sine";
+    osc2.frequency.setValueAtTime(3200, t2);
+    osc2.frequency.exponentialRampToValueAtTime(800, t2 + 0.018);
+    oscGain2.gain.setValueAtTime(0.28, t2);
+    oscGain2.gain.exponentialRampToValueAtTime(0.001, t2 + 0.018);
+    osc2.connect(oscGain2);
+    oscGain2.connect(ctx.destination);
+    osc2.start(t2);
+    osc2.stop(t2 + 0.02);
 }
+
+// Toggle for shutter sound: disabled per user request, keeping full synthesis code intact
+const ENABLE_SHUTTER_SOUND = false;
 
 /**
  * Mechanical camera shutter click sound synthesis using Web Audio API:
@@ -70,6 +130,7 @@ function playShutterOnContext(ctx: AudioContext): void {
  * No external audio assets required.
  */
 export function playCameraShutterSound(): void {
+    if (!ENABLE_SHUTTER_SOUND) return;
     const s = useSettingsStore.getState();
     if (!s.enableFlashEffect && !s.enableShutterFlash) return;
 
@@ -142,4 +203,3 @@ export function playPopFeedbackSound(): void {
         console.warn("[soundEffects] Failed to play pop feedback sound:", err);
     }
 }
-
