@@ -102,6 +102,11 @@ export interface ScreenCraftTemplateProps {
   onToggleDiagnosticsStamp: () => void;
   onResetCropArea: () => void;
   onClearAnnotations: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  onOpenCheatsheet?: () => void;
   onCancelCapture: () => void;
   onCaptureScreenRetry: () => void;
   onMouseDown: (e: KonvaEventObject<MouseEvent>) => void;
@@ -181,6 +186,11 @@ export const ScreenCraftTemplate: React.FC<ScreenCraftTemplateProps> = ({
   onToggleDiagnosticsStamp,
   onResetCropArea,
   onClearAnnotations,
+  canUndo = false,
+  canRedo = false,
+  onUndo,
+  onRedo,
+  onOpenCheatsheet,
   onCancelCapture,
   onCaptureScreenRetry,
   onMouseDown,
@@ -274,6 +284,11 @@ export const ScreenCraftTemplate: React.FC<ScreenCraftTemplateProps> = ({
           hasAnnotationsOrNodes={
             annotations.length > 0 || cropArea !== null || flowNodes.length > 0
           }
+          canUndo={canUndo}
+          canRedo={canRedo}
+          onUndo={onUndo}
+          onRedo={onRedo}
+          onOpenCheatsheet={onOpenCheatsheet}
           isCopying={isCopying}
           copySuccess={copySuccess}
           isDownloading={isDownloading}

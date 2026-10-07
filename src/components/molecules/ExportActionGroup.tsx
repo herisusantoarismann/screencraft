@@ -10,6 +10,7 @@ import {
     ShieldCheck,
     Cpu,
     Columns2,
+    HelpCircle,
 } from "lucide-react";
 import type { CropArea } from "../../types/canvas";
 import { IconButton } from "../atoms/IconButton";
@@ -33,6 +34,7 @@ export interface ExportActionGroupProps {
     onResetCropArea: () => void;
     onClearAnnotations: () => void;
     onCancelCapture: () => void;
+    onOpenCheatsheet?: () => void;
     className?: string;
 }
 
@@ -55,6 +57,7 @@ export const ExportActionGroup: React.FC<ExportActionGroupProps> = ({
     onResetCropArea,
     onClearAnnotations,
     onCancelCapture,
+    onOpenCheatsheet,
     className = "",
 }) => {
     const isBusy = isCopying || isDownloading;
@@ -224,6 +227,18 @@ export const ExportActionGroup: React.FC<ExportActionGroupProps> = ({
                 icon={<X className="w-3.5 h-3.5" />}
                 className="p-1.5 text-neutral-400 hover:text-white hover:bg-neutral-800 rounded-xl"
             />
+
+            {/* 7. Shortcuts Cheatsheet */}
+            {onOpenCheatsheet && (
+                <IconButton
+                    title="Shortcuts Cheatsheet (?)"
+                    variant="ghost"
+                    disabled={isBusy}
+                    onClick={onOpenCheatsheet}
+                    icon={<HelpCircle className="w-3.5 h-3.5 text-neutral-400 hover:text-indigo-300" />}
+                    className="p-1.5 text-neutral-400 hover:text-white hover:bg-neutral-800 rounded-xl"
+                />
+            )}
         </div>
     );
 };

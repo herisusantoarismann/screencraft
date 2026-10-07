@@ -1,4 +1,5 @@
 import React from "react";
+import { RotateCcw, RotateCw } from "lucide-react";
 import type { ToolType } from "../../stores/toolStore";
 import type { CropArea } from "../../types/canvas";
 import { AnnotationButtonGroup } from "../molecules/AnnotationButtonGroup";
@@ -14,6 +15,11 @@ export interface CanvasToolbarProps {
   isOcrProcessing: boolean;
   cropArea: CropArea | null;
   hasAnnotationsOrNodes: boolean;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  onOpenCheatsheet?: () => void;
   isCopying: boolean;
   copySuccess: boolean;
   isDownloading?: boolean;
@@ -41,6 +47,11 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
   isOcrProcessing,
   cropArea,
   hasAnnotationsOrNodes,
+  canUndo = false,
+  canRedo = false,
+  onUndo,
+  onRedo,
+  onOpenCheatsheet,
   isCopying,
   copySuccess,
   isDownloading = false,
@@ -86,7 +97,32 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
       {/* Separator */}
       <Separator />
 
-      {/* 3. Export and Action Buttons */}
+      {/* 3. Undo / Redo History Controls */}
+      <div className="flex items-center gap-0.5">
+        <button
+          type="button"
+          disabled={!canUndo || isBusy}
+          onClick={onUndo}
+          title="Undo Annotation (Ctrl+Z)"
+          className="p-1.5 rounded-xl text-neutral-300 hover:text-white hover:bg-neutral-800 disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all cursor-pointer"
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+        </button>
+        <button
+          type="button"
+          disabled={!canRedo || isBusy}
+          onClick={onRedo}
+          title="Redo Annotation (Ctrl+Y / Ctrl+Shift+Z)"
+          className="p-1.5 rounded-xl text-neutral-300 hover:text-white hover:bg-neutral-800 disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all cursor-pointer"
+        >
+          <RotateCw className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* Separator */}
+      <Separator />
+
+      {/* 4. Export and Action Buttons */}
       <ExportActionGroup
         isCopying={isCopying}
         copySuccess={copySuccess}
@@ -106,6 +142,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
         onResetCropArea={onResetCropArea}
         onClearAnnotations={onClearAnnotations}
         onCancelCapture={onCancelCapture}
+        onOpenCheatsheet={onOpenCheatsheet}
       />
     </div>
   );

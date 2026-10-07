@@ -31,6 +31,11 @@ import {
 } from "../services/fileSaveService";
 import { ScreenCraftTemplate } from "../components/templates";
 import { AboutModal, FeedbackModal } from "../components/organisms";
+import { ShortcutCheatsheetModal } from "../components/hud/ShortcutCheatsheetModal";
+import {
+    playCameraShutterSound,
+    playPopFeedbackSound,
+} from "../utils/soundEffects";
 
 export const CapturePage: React.FC = () => {
     const {
@@ -81,6 +86,7 @@ export const CapturePage: React.FC = () => {
     const prevCapturedImageRef = useRef<HTMLImageElement | null>(null);
 
     const triggerShutterFlash = useCallback(() => {
+        playCameraShutterSound();
         setShowShutterFlash(true);
         setIsFlashActive(true);
 
@@ -98,11 +104,13 @@ export const CapturePage: React.FC = () => {
         };
     }, []);
 
-    // Trigger shutter flash as soon as a new screenshot image is captured
+    // Trigger shutter flash and tactile sound as soon as a new screenshot image is captured
     useEffect(() => {
         if (capturedImage && !prevCapturedImageRef.current) {
             if (enableShutterFlash) {
                 triggerShutterFlash();
+            } else {
+                playCameraShutterSound();
             }
         }
         prevCapturedImageRef.current = capturedImage;
@@ -116,6 +124,33 @@ export const CapturePage: React.FC = () => {
     });
 
     const [annotations, setAnnotations] = useState<Annotation[]>([]);
+    const [history, setHistory] = useState<Annotation[][]>([]);
+    const [redoStack, setRedoStack] = useState<Annotation[][]>([]);
+    const [isCheatsheetOpen, setIsCheatsheetOpen] = useState<boolean>(false);
+
+    // Canvas History: Undo & Redo Handlers (Bounded to 25 snapshots)
+    const handleUndo = useCallback(() => {
+        setHistory((prevHist) => {
+            if (prevHist.length === 0) return prevHist;
+            const lastSnapshot = prevHist[prevHist.length - 1];
+            const nextHist = prevHist.slice(0, prevHist.length - 1);
+            setRedoStack((prevRedo) => [...prevRedo, annotations]);
+            setAnnotations(lastSnapshot);
+            return nextHist;
+        });
+    }, [annotations]);
+
+    const handleRedo = useCallback(() => {
+        setRedoStack((prevRedo) => {
+            if (prevRedo.length === 0) return prevRedo;
+            const nextSnapshot = prevRedo[prevRedo.length - 1];
+            const nextRedo = prevRedo.slice(0, prevRedo.length - 1);
+            setHistory((prevHist) => [...prevHist.slice(-24), annotations]);
+            setAnnotations(nextSnapshot);
+            return nextRedo;
+        });
+    }, [annotations]);
+
     const [isDrawing, setIsDrawing] = useState<boolean>(false);
     const [startPoint, setStartPoint] = useState<Point | null>(null);
     const [currentDrawing, setCurrentDrawing] = useState<Annotation | null>(
@@ -254,6 +289,9 @@ export const CapturePage: React.FC = () => {
     useEffect(() => {
         if (capturedImage) {
             setAnnotations([]);
+            setHistory([]);
+            setRedoStack([]);
+            setIsCheatsheetOpen(false);
             setCurrentDrawing(null);
             setCropArea(null);
             resetStepCounter();
@@ -322,6 +360,7 @@ export const CapturePage: React.FC = () => {
                         `#${((1 << 24) + (pixel[0] << 16) + (pixel[1] << 8) + pixel[2]).toString(16).slice(1)}`.toUpperCase();
 
                     void navigator.clipboard.writeText(hex);
+                    playPopFeedbackSound();
                     setStrokeColor(hex);
                     setEyedropperToast(`Color ${hex} Copied!`);
                     setTimeout(() => {
@@ -343,6 +382,8 @@ export const CapturePage: React.FC = () => {
                     strokeColor,
                     strokeWidth,
                 };
+                setHistory((prev) => [...prev.slice(-24), annotations]);
+                setRedoStack([]);
                 setAnnotations((prev) => [...prev, badge]);
                 incrementStepCounter();
                 return;
@@ -388,6 +429,8 @@ export const CapturePage: React.FC = () => {
                     strokeColor: preset.badgeColor,
                     strokeWidth: 1.5,
                 };
+                setHistory((prev) => [...prev.slice(-24), annotations]);
+                setRedoStack([]);
                 setAnnotations((prev) => [...prev, stampAnno]);
                 return;
             }
@@ -471,6 +514,7 @@ export const CapturePage: React.FC = () => {
             dimensions,
             setStrokeColor,
             addNode,
+            annotations,
         ],
     );
 
@@ -688,6 +732,8 @@ export const CapturePage: React.FC = () => {
         }
 
         if (isValid) {
+            setHistory((prev) => [...prev.slice(-24), annotations]);
+            setRedoStack([]);
             setAnnotations((prev) => [...prev, currentDrawing]);
         }
 
@@ -703,10 +749,15 @@ export const CapturePage: React.FC = () => {
         isDrawing,
         currentDrawing,
         setIsOcrProcessing,
+        annotations,
     ]);
 
-    // Clear all annotations and reset crop & OCR
+    // Clear all annotations and reset crop & OCR (saves current snapshot to history)
     const clearAnnotations = useCallback(() => {
+        if (annotations.length > 0) {
+            setHistory((prev) => [...prev.slice(-24), annotations]);
+            setRedoStack([]);
+        }
         setAnnotations([]);
         setCurrentDrawing(null);
         setCropArea(null);
@@ -714,7 +765,7 @@ export const CapturePage: React.FC = () => {
         setOcrModal({ isOpen: false, text: "", copied: false });
         resetStepCounter();
         resetFlow();
-    }, [resetStepCounter, resetFlow]);
+    }, [annotations, resetStepCounter, resetFlow]);
 
     // Export helper: generate clean Data URL without crop overlays
     const generateExportDataUrl = useCallback((): string | null => {
@@ -791,6 +842,7 @@ export const CapturePage: React.FC = () => {
         setIsCopying(true);
         try {
             await invoke("copy_to_clipboard", { base64Png: dataUrl });
+            playPopFeedbackSound();
             setCopySuccess(true);
             setTimeout(() => {
                 setCopySuccess(false);
@@ -809,6 +861,7 @@ export const CapturePage: React.FC = () => {
 
         try {
             await invoke("copy_to_clipboard", { base64Png: dataUrl });
+            playPopFeedbackSound();
             return true;
         } catch (err) {
             console.error("[CapturePage] Copy screenshot image failed:", err);
@@ -867,6 +920,9 @@ export const CapturePage: React.FC = () => {
         setCropArea(null);
         setOcrArea(null);
         setAnnotations([]);
+        setHistory([]);
+        setRedoStack([]);
+        setIsCheatsheetOpen(false);
         setCurrentDrawing(null);
         setOcrModal({ isOpen: false, text: "", copied: false });
         setIsMarkdownModalOpen(false);
@@ -1069,6 +1125,10 @@ export const CapturePage: React.FC = () => {
             event.stopPropagation();
 
             // 1. Priority 1: Modals and Popovers
+            if (isCheatsheetOpen) {
+                setIsCheatsheetOpen(false);
+                return;
+            }
             if (ocrModal.isOpen) {
                 setOcrModal({ isOpen: false, text: "", copied: false });
                 return;
@@ -1116,6 +1176,7 @@ export const CapturePage: React.FC = () => {
         };
     }, [
         capturedImage,
+        isCheatsheetOpen,
         ocrModal.isOpen,
         isMarkdownModalOpen,
         isWebhookModalOpen,
@@ -1127,6 +1188,113 @@ export const CapturePage: React.FC = () => {
         setActiveTool,
         setActiveNodeId,
         handleFullCancelCapture,
+    ]);
+
+    // Global canvas shortcuts listener (Undo, Redo, Copy, Save, Cheatsheet)
+    useEffect(() => {
+        if (!capturedImage) return;
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            const target = e.target as HTMLElement | null;
+            if (
+                target &&
+                (target.tagName === "INPUT" ||
+                    target.tagName === "TEXTAREA" ||
+                    target.tagName === "SELECT" ||
+                    target.isContentEditable)
+            ) {
+                return;
+            }
+
+            if (
+                isMarkdownModalOpen ||
+                isWebhookModalOpen ||
+                isDiagnosticsModalOpen ||
+                isComparisonModalOpen ||
+                isAboutModalOpen ||
+                isFeedbackModalOpen ||
+                ocrModal.isOpen
+            ) {
+                return;
+            }
+
+            // '?' key: Toggle Shortcuts Cheatsheet
+            if (e.key === "?" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsCheatsheetOpen((prev) => !prev);
+                return;
+            }
+
+            if (isCheatsheetOpen) return;
+
+            // Undo: Ctrl+Z (without Shift)
+            if (
+                (e.ctrlKey || e.metaKey) &&
+                e.key.toLowerCase() === "z" &&
+                !e.shiftKey
+            ) {
+                e.preventDefault();
+                e.stopPropagation();
+                handleUndo();
+                return;
+            }
+
+            // Redo: Ctrl+Y or Ctrl+Shift+Z
+            if (
+                (e.ctrlKey || e.metaKey) &&
+                (e.key.toLowerCase() === "y" ||
+                    (e.key.toLowerCase() === "z" && e.shiftKey))
+            ) {
+                e.preventDefault();
+                e.stopPropagation();
+                handleRedo();
+                return;
+            }
+
+            // Copy to Clipboard: Ctrl+C
+            if (
+                (e.ctrlKey || e.metaKey) &&
+                e.key.toLowerCase() === "c" &&
+                !e.shiftKey
+            ) {
+                e.preventDefault();
+                e.stopPropagation();
+                void handleCopyToClipboard();
+                return;
+            }
+
+            // Save PNG: Ctrl+S
+            if (
+                (e.ctrlKey || e.metaKey) &&
+                e.key.toLowerCase() === "s" &&
+                !e.shiftKey
+            ) {
+                e.preventDefault();
+                e.stopPropagation();
+                void handleDownloadPNG();
+                return;
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => {
+            window.removeEventListener("keydown", handleKeyDown);
+        };
+    }, [
+        capturedImage,
+        isMarkdownModalOpen,
+        isWebhookModalOpen,
+        isDiagnosticsModalOpen,
+        isComparisonModalOpen,
+        isAboutModalOpen,
+        isFeedbackModalOpen,
+        ocrModal.isOpen,
+        isCheatsheetOpen,
+        handleUndo,
+        handleRedo,
+        handleCopyToClipboard,
+        handleDownloadPNG,
     ]);
 
     return (
@@ -1209,6 +1377,11 @@ export const CapturePage: React.FC = () => {
                 }}
                 onResetCropArea={() => setCropArea(null)}
                 onClearAnnotations={clearAnnotations}
+                canUndo={history.length > 0}
+                canRedo={redoStack.length > 0}
+                onUndo={handleUndo}
+                onRedo={handleRedo}
+                onOpenCheatsheet={() => setIsCheatsheetOpen(true)}
                 onCancelCapture={() => void handleFullCancelCapture()}
                 onCaptureScreenRetry={() => void captureScreen()}
                 onMouseDown={handleMouseDown}
@@ -1224,6 +1397,7 @@ export const CapturePage: React.FC = () => {
                 }
                 onCopyOcrAgain={(text) => {
                     void navigator.clipboard.writeText(text);
+                    playPopFeedbackSound();
                     setOcrModal((prev) => ({ ...prev, copied: true }));
                 }}
                 onCopyToClipboardWithImage={handleCopyToClipboard}
@@ -1248,6 +1422,12 @@ export const CapturePage: React.FC = () => {
             <FeedbackModal
                 isOpen={isFeedbackModalOpen}
                 onClose={() => void handleCloseFeedbackModal()}
+            />
+
+            {/* Keyboard Shortcuts Cheatsheet Modal */}
+            <ShortcutCheatsheetModal
+                isOpen={isCheatsheetOpen}
+                onClose={() => setIsCheatsheetOpen(false)}
             />
         </>
     );
