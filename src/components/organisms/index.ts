@@ -12,4 +12,6 @@ export * from "../hud/WebhookModal";
 export * from "./DiagnosticsModal";
 export * from "./VisualComparisonModal";
 export * from "./AboutModal";
+export * from "./FeedbackModal";
+export * from "./ErrorBoundary";
 export * from "./SettingsModal";
