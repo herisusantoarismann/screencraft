@@ -38,19 +38,31 @@ mod win_ops {
     #[link(name = "user32")]
     extern "system" {
         fn GetForegroundWindow() -> *mut std::ffi::c_void;
-        fn GetWindowTextW(hwnd: *mut std::ffi::c_void, lp_string: *mut u16, n_max_count: i32) -> i32;
+        fn GetWindowTextW(
+            hwnd: *mut std::ffi::c_void,
+            lp_string: *mut u16,
+            n_max_count: i32,
+        ) -> i32;
         fn GetWindowTextLengthW(hwnd: *mut std::ffi::c_void) -> i32;
         fn GetWindowThreadProcessId(hwnd: *mut std::ffi::c_void, lpdw_process_id: *mut u32) -> u32;
         fn GetTopWindow(hwnd: *mut std::ffi::c_void) -> *mut std::ffi::c_void;
         fn GetWindow(hwnd: *mut std::ffi::c_void, u_cmd: u32) -> *mut std::ffi::c_void;
         fn IsWindowVisible(hwnd: *mut std::ffi::c_void) -> i32;
         fn IsIconic(hwnd: *mut std::ffi::c_void) -> i32;
-        fn GetClassNameW(hwnd: *mut std::ffi::c_void, lp_class_name: *mut u16, n_max_count: i32) -> i32;
+        fn GetClassNameW(
+            hwnd: *mut std::ffi::c_void,
+            lp_class_name: *mut u16,
+            n_max_count: i32,
+        ) -> i32;
     }
 
     #[link(name = "kernel32")]
     extern "system" {
-        fn OpenProcess(dw_desired_access: u32, b_inherit_handle: i32, dw_process_id: u32) -> *mut std::ffi::c_void;
+        fn OpenProcess(
+            dw_desired_access: u32,
+            b_inherit_handle: i32,
+            dw_process_id: u32,
+        ) -> *mut std::ffi::c_void;
         fn CloseHandle(h_object: *mut std::ffi::c_void) -> i32;
         fn QueryFullProcessImageNameW(
             h_process: *mut std::ffi::c_void,
@@ -127,7 +139,9 @@ mod win_ops {
                 let size = GetFileVersionInfoSizeW(path_buf.as_ptr(), &mut zero);
                 if size > 0 {
                     let mut data = vec![0u8; size as usize];
-                    if GetFileVersionInfoW(path_buf.as_ptr(), 0, size, data.as_mut_ptr() as *mut _) != 0 {
+                    if GetFileVersionInfoW(path_buf.as_ptr(), 0, size, data.as_mut_ptr() as *mut _)
+                        != 0
+                    {
                         let sub_block: Vec<u16> = "\\\0".encode_utf16().collect();
                         let mut ptr = std::ptr::null_mut();
                         let mut out_len = 0u32;
@@ -374,13 +388,21 @@ mod win_ops {
         const HKEY_LOCAL_MACHINE: isize = -2147483646; // 0x80000002
         const KEY_READ: u32 = 0x20019;
 
-        let sub_key: Vec<u16> = "SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\0"
-            .encode_utf16()
-            .collect();
+        let sub_key: Vec<u16> =
+            "SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\0"
+                .encode_utf16()
+                .collect();
 
         unsafe {
             let mut h_root = 0isize;
-            if RegOpenKeyExW(HKEY_LOCAL_MACHINE, sub_key.as_ptr(), 0, KEY_READ, &mut h_root) != 0 {
+            if RegOpenKeyExW(
+                HKEY_LOCAL_MACHINE,
+                sub_key.as_ptr(),
+                0,
+                KEY_READ,
+                &mut h_root,
+            ) != 0
+            {
                 return ("Generic Display Adapter".to_string(), "".to_string());
             }
 
@@ -404,7 +426,9 @@ mod win_ops {
                     break;
                 }
 
-                let sub_folder = OsString::from_wide(&name_buf[..name_len as usize]).to_string_lossy().to_string();
+                let sub_folder = OsString::from_wide(&name_buf[..name_len as usize])
+                    .to_string_lossy()
+                    .to_string();
                 if !sub_folder.starts_with("00") {
                     continue;
                 }
@@ -414,7 +438,14 @@ mod win_ops {
                     .collect();
 
                 let mut h_adapter = 0isize;
-                if RegOpenKeyExW(HKEY_LOCAL_MACHINE, full_sub.as_ptr(), 0, KEY_READ, &mut h_adapter) == 0 {
+                if RegOpenKeyExW(
+                    HKEY_LOCAL_MACHINE,
+                    full_sub.as_ptr(),
+                    0,
+                    KEY_READ,
+                    &mut h_adapter,
+                ) == 0
+                {
                     let desc_val: Vec<u16> = "DriverDesc\0".encode_utf16().collect();
                     let ver_val: Vec<u16> = "DriverVersion\0".encode_utf16().collect();
 
@@ -423,16 +454,46 @@ mod win_ops {
                     let mut val_type = 0u32;
 
                     let mut gpu_name = String::new();
-                    if RegQueryValueExW(h_adapter, desc_val.as_ptr(), std::ptr::null_mut(), &mut val_type, buf.as_mut_ptr(), &mut buf_size) == 0 && buf_size > 2 {
-                        let u16_slice = std::slice::from_raw_parts(buf.as_ptr() as *const u16, (buf_size as usize) / 2);
-                        gpu_name = OsString::from_wide(u16_slice).to_string_lossy().trim_matches('\0').to_string();
+                    if RegQueryValueExW(
+                        h_adapter,
+                        desc_val.as_ptr(),
+                        std::ptr::null_mut(),
+                        &mut val_type,
+                        buf.as_mut_ptr(),
+                        &mut buf_size,
+                    ) == 0
+                        && buf_size > 2
+                    {
+                        let u16_slice = std::slice::from_raw_parts(
+                            buf.as_ptr() as *const u16,
+                            (buf_size as usize) / 2,
+                        );
+                        gpu_name = OsString::from_wide(u16_slice)
+                            .to_string_lossy()
+                            .trim_matches('\0')
+                            .to_string();
                     }
 
                     let mut driver_ver = String::new();
                     buf_size = 512;
-                    if RegQueryValueExW(h_adapter, ver_val.as_ptr(), std::ptr::null_mut(), &mut val_type, buf.as_mut_ptr(), &mut buf_size) == 0 && buf_size > 2 {
-                        let u16_slice = std::slice::from_raw_parts(buf.as_ptr() as *const u16, (buf_size as usize) / 2);
-                        driver_ver = OsString::from_wide(u16_slice).to_string_lossy().trim_matches('\0').to_string();
+                    if RegQueryValueExW(
+                        h_adapter,
+                        ver_val.as_ptr(),
+                        std::ptr::null_mut(),
+                        &mut val_type,
+                        buf.as_mut_ptr(),
+                        &mut buf_size,
+                    ) == 0
+                        && buf_size > 2
+                    {
+                        let u16_slice = std::slice::from_raw_parts(
+                            buf.as_ptr() as *const u16,
+                            (buf_size as usize) / 2,
+                        );
+                        driver_ver = OsString::from_wide(u16_slice)
+                            .to_string_lossy()
+                            .trim_matches('\0')
+                            .to_string();
                     }
 
                     RegCloseKey(h_adapter);
@@ -441,7 +502,10 @@ mod win_ops {
                     if !gpu_name.is_empty() && !gpu_name.contains("Basic") {
                         best_gpu = gpu_name;
                         best_driver = driver_ver;
-                        if best_gpu.contains("NVIDIA") || best_gpu.contains("Radeon RX") || best_gpu.contains("GeForce") {
+                        if best_gpu.contains("NVIDIA")
+                            || best_gpu.contains("Radeon RX")
+                            || best_gpu.contains("GeForce")
+                        {
                             break;
                         }
                     }
@@ -472,7 +536,12 @@ pub fn extract_system_diagnostics(
     let kernel_ver = System::kernel_version().unwrap_or_else(|| "".to_string());
     let arch = std::env::consts::ARCH;
 
-    let os_display = format!("{} {} ({}-bit)", os_name, os_ver, if arch == "x86_64" { "64" } else { arch });
+    let os_display = format!(
+        "{} {} ({}-bit)",
+        os_name,
+        os_ver,
+        if arch == "x86_64" { "64" } else { arch }
+    );
     let os_build = if !kernel_ver.is_empty() {
         format!("Build {}", kernel_ver)
     } else {
@@ -556,11 +625,19 @@ pub fn extract_system_diagnostics(
         ram_avail_gb,
         ram_used_pct,
         gpu_name,
-        if !gpu_driver.is_empty() { format!("(Driver: `{}`)", gpu_driver) } else { "".to_string() },
+        if !gpu_driver.is_empty() {
+            format!("(Driver: `{}`)", gpu_driver)
+        } else {
+            "".to_string()
+        },
         display_res,
         scale_pct,
         app_name,
-        if !app_ver.is_empty() { format!("`{}`", app_ver) } else { "".to_string() },
+        if !app_ver.is_empty() {
+            format!("`{}`", app_ver)
+        } else {
+            "".to_string()
+        },
         win_title,
         now
     );
@@ -620,4 +697,3 @@ fn get_local_timestamp() -> String {
 fn get_local_timestamp() -> String {
     "Local Time".to_string()
 }
-
