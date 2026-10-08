@@ -604,7 +604,7 @@ pub fn extract_system_diagnostics(
         now
     );
 
-    // Markdown Table for QA tickets / Webhook
+    // Markdown Table for issue reports / Webhook
     let markdown_table = format!(
         "### 🏛️ Environment & Hardware Diagnostics\n\n\
         | Diagnostic Metric | Detected Hardware / Environment Specification |\n\

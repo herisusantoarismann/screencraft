@@ -219,7 +219,7 @@ export const ScreenCraftTemplate: React.FC<ScreenCraftTemplateProps> = ({
     isDiagnosticsModalOpen ||
     Boolean(isComparisonModalOpen);
 
-  // Dedicated mini floater mode when QA ticket modal is minimized to floater
+  // Dedicated mini floater mode when markdown export modal is minimized to floater
   if (isFloaterActive && isMarkdownModalOpen) {
     return (
       <div className="w-screen h-screen overflow-hidden bg-transparent select-none p-1">
@@ -435,7 +435,7 @@ export const ScreenCraftTemplate: React.FC<ScreenCraftTemplateProps> = ({
         diagnostics={diagnostics}
       />
 
-      {/* QA Hardware & Environment Diagnostics Modal */}
+      {/* System Hardware & Environment Diagnostics Modal */}
       <DiagnosticsModal
         isOpen={isDiagnosticsModalOpen}
         diagnostics={diagnostics}

@@ -1005,8 +1005,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                         Instant Team Webhooks
                                     </h3>
                                     <p className="text-xs text-neutral-400">
-                                        Directly dispatch screenshots and QA
-                                        tickets to your team channels
+                                        Directly dispatch screenshots and
+                                        reports to your team channels
                                     </p>
                                 </div>
 

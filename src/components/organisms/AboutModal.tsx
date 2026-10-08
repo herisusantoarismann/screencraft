@@ -54,7 +54,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({
           <div>
             <h3 className="text-lg font-bold text-white tracking-tight">ScreenCraft</h3>
             <p className="text-xs text-purple-300/90 font-medium mt-0.5">
-              Zero-latency developer & QA screen utility
+              Zero-latency screen capture & annotation utility
             </p>
           </div>
 

@@ -714,7 +714,7 @@ export const VisualComparisonModal: React.FC<VisualComparisonModalProps> = ({
                                     Figma vs Live Comparison
                                 </span>
                                 <span className="text-[10px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded-md bg-pink-950/80 text-pink-300 border border-pink-500/30">
-                                    UI/UX Slicing QA
+                                    UI/UX Slicing Inspection
                                 </span>
                             </div>
                             <p className="text-[11px] text-neutral-400">
@@ -1121,7 +1121,7 @@ export const VisualComparisonModal: React.FC<VisualComparisonModalProps> = ({
 
                             <div className="p-2 bg-neutral-900/90 border border-neutral-800 rounded-xl text-[11px] text-neutral-300 flex items-center gap-1.5 mt-2">
                                 <span className="font-semibold text-pink-400">
-                                    💡 QA Tip:
+                                    💡 Pro Tip:
                                 </span>
                                 <span>
                                     In Figma, select your frame, press Ctrl +
