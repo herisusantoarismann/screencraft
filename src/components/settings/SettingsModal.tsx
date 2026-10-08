@@ -7,6 +7,7 @@ import {
     Webhook,
     X,
     RotateCcw,
+    RotateCw,
     Check,
     AlertCircle,
     Send,
@@ -17,6 +18,7 @@ import {
 import { useSettingsStore, DEFAULT_SETTINGS } from "../../stores/settingsStore";
 import { invoke } from "@tauri-apps/api/core";
 import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
+import { useAutoUpdater } from "../../hooks/useAutoUpdater";
 
 export interface SettingsModalProps {
     isOpen?: boolean;
@@ -112,6 +114,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const [testingSlack, setTestingSlack] = useState<boolean>(false);
     const [slackStatus, setSlackStatus] = useState<string | null>(null);
     const [showResetConfirm, setShowResetConfirm] = useState<boolean>(false);
+
+    const {
+        isChecking: isCheckingUpdate,
+        checkForAppUpdates,
+        toastMessage: updateToastMessage,
+        clearToast: clearUpdateToast,
+    } = useAutoUpdater();
 
     const handleBrowseFolder = useCallback(async () => {
         try {
@@ -744,6 +753,57 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                         />
                                         <div className="w-10 h-5 bg-neutral-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600" />
                                     </label>
+                                </div>
+
+                                {/* Application Updates */}
+                                <div className="p-3.5 bg-neutral-950/60 border border-neutral-800 rounded-xl flex flex-col gap-3">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex flex-col gap-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs font-semibold text-neutral-200">
+                                                    Application Updates
+                                                </span>
+                                                <span className="px-1.5 py-0.5 text-[10px] font-mono font-medium bg-neutral-900 border border-neutral-700/80 text-purple-300 rounded">
+                                                    v{typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "1.0.0"}
+                                                </span>
+                                            </div>
+                                            <span className="text-[11px] text-neutral-500">
+                                                Check GitHub Releases for the latest features, improvements, and bug fixes
+                                            </span>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            disabled={isCheckingUpdate}
+                                            onClick={() => void checkForAppUpdates(false)}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-neutral-800 hover:bg-neutral-700 active:bg-neutral-600 disabled:opacity-50 text-white rounded-lg border border-neutral-700 transition-colors cursor-pointer shrink-0"
+                                        >
+                                            <RotateCw
+                                                className={`w-3.5 h-3.5 ${
+                                                    isCheckingUpdate
+                                                        ? "animate-spin text-purple-400"
+                                                        : "text-neutral-400"
+                                                }`}
+                                            />
+                                            <span>
+                                                {isCheckingUpdate
+                                                    ? "Checking..."
+                                                    : "Check for Updates"}
+                                            </span>
+                                        </button>
+                                    </div>
+
+                                    {updateToastMessage && (
+                                        <div className="px-3 py-2 bg-purple-950/40 border border-purple-800/50 rounded-lg text-xs text-purple-200 flex items-center justify-between animate-fadeIn">
+                                            <span>{updateToastMessage}</span>
+                                            <button
+                                                type="button"
+                                                onClick={clearUpdateToast}
+                                                className="text-neutral-400 hover:text-white p-0.5"
+                                            >
+                                                <X className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}

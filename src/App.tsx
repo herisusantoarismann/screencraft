@@ -1,7 +1,9 @@
 import React, { useEffect } from "react";
 import { CapturePage } from "./pages";
 import { SettingsModal } from "./components/settings";
+import { UpdateModal } from "./components/updater";
 import { useSettingsStore } from "./stores/settingsStore";
+import { useUpdaterStore } from "./hooks/useAutoUpdater";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { isEnabled, enable, disable } from "@tauri-apps/plugin-autostart";
@@ -35,6 +37,9 @@ const App: React.FC = () => {
       .catch((err) => {
         console.warn("[App] Failed to sync autostart status:", err);
       });
+
+    // Check for updates quietly in background upon app startup
+    void useUpdaterStore.getState().checkForAppUpdates(true);
 
     // Proactively warm up Web Audio API AudioContext on window focus or interaction
     const warmAudio = () => {
@@ -89,6 +94,7 @@ const App: React.FC = () => {
     <main className="w-screen h-screen overflow-hidden bg-transparent">
       <CapturePage />
       {isSettingsOpen && <SettingsModal />}
+      <UpdateModal />
     </main>
   );
 };
