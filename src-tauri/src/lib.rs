@@ -53,7 +53,7 @@ fn do_capture_screen() -> Result<String, String> {
     // Ambil monitor utama (primary) atau fallback ke monitor pertama
     let monitor = monitors
         .iter()
-        .find(|m| m.is_primary())
+        .find(|m| m.is_primary().unwrap_or(false))
         .unwrap_or(&monitors[0]);
 
     let image = monitor
