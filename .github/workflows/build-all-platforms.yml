@@ -2,6 +2,11 @@ name: Multi-Platform Build & Release
 
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release Tag (e.g. v1.0.0)'
+        required: false
+        default: 'v1.0.0'
   push:
     tags:
       - 'v*'
@@ -50,9 +55,11 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: 'ScreenCraft ${{ github.ref_name }}'
+          tagName: ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag || 'v1.0.0' }}
+          releaseName: 'ScreenCraft ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag || "v1.0.0" }}'
           releaseBody: 'Release binaries for ScreenCraft.'
           releaseDraft: false
           prerelease: false
