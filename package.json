@@ -7,7 +7,14 @@
         "dev": "vite",
         "build": "tsc && vite build",
         "preview": "vite preview",
-        "tauri": "tauri"
+        "tauri": "tauri",
+        "tauri:build": "tauri build",
+        "tauri:build:win": "tauri build --bundles nsis,msi",
+        "tauri:build:nsis": "tauri build --bundles nsis",
+        "tauri:build:msi": "tauri build --bundles msi",
+        "tauri:build:portable": "tauri build --bundles none",
+        "tauri:build:mac": "tauri build --bundles dmg,app",
+        "tauri:build:linux": "tauri build --bundles deb,appimage"
     },
     "dependencies": {
         "@ffmpeg/core": "^0.12.6",
