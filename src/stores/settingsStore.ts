@@ -83,7 +83,7 @@ export const DEFAULT_SETTINGS = {
 
   saveMode: "ask" as SaveMode,
   autoSavePath: "",
-  namingPattern: "screencraft-{YYYY-MM-DD}_{HH-mm-ss}",
+  namingPattern: "snapforge-{YYYY-MM-DD}_{HH-mm-ss}",
   autoCopyToClipboard: false,
 
   attachSpecsWatermark: false,

@@ -141,7 +141,7 @@ export const compressVideoForPlatform = async (
     const sizeMB =
       Math.round((compressedBlob.size / (1024 * 1024)) * 100) / 100;
     const finalExt = usedOutputName.split(".").pop();
-    const finalFileName = `screencraft-${platform}-${Date.now()}.${finalExt}`;
+    const finalFileName = `snapforge-${platform}-${Date.now()}.${finalExt}`;
 
     onProgress(100);
 

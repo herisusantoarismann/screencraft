@@ -27,7 +27,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({
             <div className="w-6 h-6 rounded-lg bg-purple-600/30 border border-purple-500/40 flex items-center justify-center text-purple-300">
               <Sparkles className="w-3.5 h-3.5" />
             </div>
-            <span className="font-bold text-sm text-neutral-100">About ScreenCraft</span>
+            <span className="font-bold text-sm text-neutral-100">About SnapForge</span>
           </div>
           <button
             type="button"
@@ -43,8 +43,8 @@ export const AboutModal: React.FC<AboutModalProps> = ({
         <div className="p-6 flex flex-col items-center text-center gap-4">
           {/* Logo / Badge */}
           <div className="relative">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-pink-500 flex items-center justify-center shadow-xl shadow-purple-600/20 border border-white/20">
-              <span className="text-2xl font-black text-white tracking-wider font-mono">SC</span>
+            <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-xl shadow-purple-600/20 border border-white/20 bg-neutral-900 flex items-center justify-center">
+              <img src="/app-icon.png" alt="SnapForge" className="w-full h-full object-cover" />
             </div>
             <span className="absolute -bottom-2 -right-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-neutral-950 border border-neutral-700 text-purple-300 font-mono">
               v{__APP_VERSION__}
@@ -52,7 +52,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({
           </div>
 
           <div>
-            <h3 className="text-lg font-bold text-white tracking-tight">ScreenCraft</h3>
+            <h3 className="text-lg font-bold text-white tracking-tight">SnapForge</h3>
             <p className="text-xs text-purple-300/90 font-medium mt-0.5">
               Zero-latency screen capture & annotation utility
             </p>

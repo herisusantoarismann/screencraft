@@ -77,7 +77,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               </div>
               <div className="flex flex-col">
                 <h1 className="text-base font-bold text-white tracking-wide">
-                  ScreenCraft Encountered an Issue
+                  SnapForge Encountered an Issue
                 </h1>
                 <p className="text-xs text-neutral-400">
                   The application caught an unexpected error and safely stopped.

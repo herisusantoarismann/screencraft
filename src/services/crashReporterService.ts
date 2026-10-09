@@ -1,5 +1,5 @@
 /**
- * ScreenCraft Automated Crash & Error Reporter
+ * SnapForge Automated Crash & Error Reporter
  * Dispatches application runtime errors and unhandled exceptions to Discord Webhook.
  */
 
@@ -105,10 +105,10 @@ export const reportCrash = async (options: CrashReportOptions): Promise<boolean>
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          username: "ScreenCraft Crash Reporter",
+          username: "SnapForge Crash Reporter",
           embeds: [
             {
-              title: "🚨 ScreenCraft Error Report",
+              title: "🚨 SnapForge Error Report",
               color: 15548997,
               fields: [
                 { name: "Error Type", value: `\`${options.errorType}\``, inline: true },
@@ -118,7 +118,7 @@ export const reportCrash = async (options: CrashReportOptions): Promise<boolean>
                   ? [{ name: "Stack Trace", value: `\`\`\`\n${stack.slice(0, 950)}\n\`\`\``, inline: false }]
                   : []),
               ],
-              footer: { text: "ScreenCraft Diagnostic Telemetry" },
+              footer: { text: "SnapForge Diagnostic Telemetry" },
             },
           ],
         }),

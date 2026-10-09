@@ -42,7 +42,7 @@ const CATEGORIES: Array<{
         icon: Lightbulb,
         color: "text-amber-400 border-amber-500/30 bg-amber-500/10",
         placeholder:
-            "What feature or improvement would you love to see in ScreenCraft? How would it help you?",
+            "What feature or improvement would you love to see in SnapForge? How would it help you?",
     },
     {
         id: "general",
@@ -50,7 +50,7 @@ const CATEGORIES: Array<{
         icon: MessageSquare,
         color: "text-purple-400 border-purple-500/30 bg-purple-500/10",
         placeholder:
-            "Share your thoughts, suggestions, or general feedback about using ScreenCraft...",
+            "Share your thoughts, suggestions, or general feedback about using SnapForge...",
     },
 ];
 
@@ -217,7 +217,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
                                 Send Feedback & Suggestions
                             </h2>
                             <p className="text-[11px] text-neutral-400">
-                                Direct mailbox to the ScreenCraft development
+                                Direct mailbox to the SnapForge development
                                 team
                             </p>
                         </div>

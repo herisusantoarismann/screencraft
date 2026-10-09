@@ -369,7 +369,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             .replace(/{HH-mm-ss}/g, `${hh}-${min}-${ss}`);
 
         if (!formatted.trim()) {
-            formatted = `screencraft-${yyyy}-${mm}-${dd}_${hh}-${min}-${ss}`;
+            formatted = `snapforge-${yyyy}-${mm}-${dd}_${hh}-${min}-${ss}`;
         }
 
         return `${formatted}.png`;
@@ -389,8 +389,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     content:
-                        "🔔 **ScreenCraft Webhook Test**: Connection successful!",
-                    username: "ScreenCraft",
+                        "🔔 **SnapForge Webhook Test**: Connection successful!",
+                    username: "SnapForge",
                 }),
             });
             if (res.ok) {
@@ -421,7 +421,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             await invoke("send_slack_webhook", {
                 webhookUrl: slackWebhookUrl.trim(),
                 messageText:
-                    "🔔 *ScreenCraft Webhook Test*: Connection verified!",
+                    "🔔 *SnapForge Webhook Test*: Connection verified!",
             });
             setSlackStatus(
                 "✓ Ping succeeded! Notification delivered to Slack.",
@@ -686,7 +686,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                             Launch on Windows Startup
                                         </span>
                                         <span className="text-[11px] text-neutral-500">
-                                            Automatically start ScreenCraft in
+                                            Automatically start SnapForge in
                                             the system tray when you log in
                                         </span>
                                     </div>
@@ -712,7 +712,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                             Minimize to Tray when Closed
                                         </span>
                                         <span className="text-[11px] text-neutral-500">
-                                            Keep ScreenCraft running quietly in
+                                            Keep SnapForge running quietly in
                                             the background taskbar overflow
                                         </span>
                                     </div>
@@ -889,7 +889,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                             onChange={(e) =>
                                                 setAutoSavePath(e.target.value)
                                             }
-                                            placeholder="e.g. C:\Users\Username\Pictures\ScreenCraft"
+                                            placeholder="e.g. C:\Users\Username\Pictures\SnapForge"
                                             className="flex-1 px-3 py-2 text-xs bg-neutral-900 border border-neutral-700 rounded-lg text-white font-mono focus:outline-none focus:border-purple-500"
                                         />
                                         <button

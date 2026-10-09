@@ -25,7 +25,7 @@ export function setLastSaveDir(dir: string): void {
  */
 export function formatNamingPattern(ext = "png"): string {
     const settings = useSettingsStore.getState();
-    const pattern = settings.namingPattern || "screencraft-{YYYY-MM-DD}_{HH-mm-ss}";
+    const pattern = settings.namingPattern || "snapforge-{YYYY-MM-DD}_{HH-mm-ss}";
 
     const now = new Date();
     const pad = (n: number) => n.toString().padStart(2, "0");
@@ -49,7 +49,7 @@ export function formatNamingPattern(ext = "png"): string {
     // Strip any hardcoded image/video extension user might have entered in the pattern
     formatted = formatted.replace(/\.(png|jpe?g|webp|gif|webm|mp4)$/i, "");
     if (!formatted.trim()) {
-        formatted = `screencraft-${yyyy}-${mm}-${dd}_${hh}-${min}-${ss}`;
+        formatted = `snapforge-${yyyy}-${mm}-${dd}_${hh}-${min}-${ss}`;
     }
 
     const cleanExt = ext.replace(/^\.+/, "");

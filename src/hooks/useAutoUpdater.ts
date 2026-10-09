@@ -70,7 +70,7 @@ export const useUpdaterStore = create<UpdaterState>((set, get) => ({
             version: update.version,
             currentVersion: update.currentVersion,
             date: update.date,
-            body: update.body || "Pembaruan versi terbaru ScreenCraft dengan peningkatan performa dan stabilitas.",
+            body: update.body || "Pembaruan versi terbaru SnapForge dengan peningkatan performa dan stabilitas.",
           },
         });
 
@@ -89,7 +89,7 @@ export const useUpdaterStore = create<UpdaterState>((set, get) => ({
         if (!silent) {
           const currentVer = update?.currentVersion || __APP_VERSION__ || "1.0.0";
           set({
-            toastMessage: `ScreenCraft sudah versi terbaru (v${currentVer}).`,
+            toastMessage: `SnapForge sudah versi terbaru (v${currentVer}).`,
             toastType: "success",
           });
           setTimeout(() => get().clearToast(), 4000);

@@ -25,7 +25,7 @@ export async function getSystemDiagnostics(): Promise<SystemDiagnostics> {
       active_window_app: "Application",
       active_window_version: "",
       timestamp: new Date().toLocaleTimeString(),
-      compact_stamp: `OS: Windows | Display: ${window.screen.width}x${window.screen.height} @ ${Math.round((window.devicePixelRatio || 1) * 100)}% | ScreenCraft`,
+      compact_stamp: `OS: Windows | Display: ${window.screen.width}x${window.screen.height} @ ${Math.round((window.devicePixelRatio || 1) * 100)}% | SnapForge`,
       markdown_table: "### Environment Diagnostics\n*(Unavailable)*\n",
       available_apps: [],
     };
@@ -113,12 +113,12 @@ export async function attachDiagnosticsFooter(
 
       ctx.fillText(textToRender, textStartX, textY);
 
-      // 6. Right brand tag: SCREENCRAFT
+      // 6. Right brand tag: SNAPFORGE
       if (img.width >= 500) {
         ctx.textAlign = "right";
         ctx.font = `bold ${fontSize - 1}px monospace, sans-serif`;
         ctx.fillStyle = "#818cf8";
-        ctx.fillText("SCREENCRAFT", img.width - 16, textY);
+        ctx.fillText("SNAPFORGE", img.width - 16, textY);
       }
 
       resolve(canvas.toDataURL("image/png"));

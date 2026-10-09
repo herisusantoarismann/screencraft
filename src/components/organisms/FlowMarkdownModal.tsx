@@ -466,7 +466,7 @@ export const FlowMarkdownModal: React.FC<FlowMarkdownModalProps> = ({
             const zipBlob = await zip.generateAsync({ type: "blob" });
             const cleanTitle = title.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 30);
             const dateStr = new Date().toISOString().slice(0, 10);
-            const defaultZipName = cleanTitle ? `${category || "BUG"}_${cleanTitle}.zip` : `screencraft-ticket-${dateStr}.zip`;
+            const defaultZipName = cleanTitle ? `${category || "BUG"}_${cleanTitle}.zip` : `snapforge-ticket-${dateStr}.zip`;
 
             const res = await saveFileWithDialog({
                 defaultName: defaultZipName,
