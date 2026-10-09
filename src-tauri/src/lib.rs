@@ -519,7 +519,7 @@ fn copy_to_clipboard(base64_png: String) -> Result<(), String> {
 #[tauri::command]
 async fn send_slack_webhook(webhook_url: String, message_text: String) -> Result<(), String> {
     let text_payload = if message_text.trim().is_empty() {
-        "📸 Tangkapan layar dari *ScreenCraft*".to_string()
+        "📸 Tangkapan layar dari *SnapForge*".to_string()
     } else {
         message_text.trim().to_string()
     };
@@ -574,12 +574,12 @@ async fn send_discord_webhook(
         .map_err(|e| format!("Failed to decode image base64: {e}"))?;
 
     let file_part = reqwest::multipart::Part::bytes(png_bytes)
-        .file_name("screencraft-capture.png")
+        .file_name("snapforge-capture.png")
         .mime_str("image/png")
         .map_err(|e| format!("Failed to create multipart file part: {e}"))?;
 
     let text_payload = if content.trim().is_empty() {
-        "📸 Tangkapan layar dari **ScreenCraft**".to_string()
+        "📸 Tangkapan layar dari **SnapForge**".to_string()
     } else {
         content.trim().to_string()
     };
@@ -679,13 +679,13 @@ async fn send_discord_error_report(
     }
 
     let payload = serde_json::json!({
-        "username": "ScreenCraft Crash Reporter",
+        "username": "SnapForge Crash Reporter",
         "embeds": [{
-            "title": "🚨 ScreenCraft Error Report",
+            "title": "🚨 SnapForge Error Report",
             "color": 15548997, // #ED4245 (Red)
             "fields": fields,
             "footer": {
-                "text": "ScreenCraft Diagnostic Telemetry"
+                "text": "SnapForge Diagnostic Telemetry"
             }
         }]
     });
@@ -727,9 +727,9 @@ async fn send_discord_feedback(
     let category_clean = category.trim();
 
     let (title, color) = match category_clean {
-        "bug" => ("🐞 ScreenCraft Bug Report", 15548997),             // Red
-        "feature" => ("💡 ScreenCraft Feature Request", 16753920),    // Amber
-        _ => ("💬 ScreenCraft User Feedback", 10181046),              // Purple
+        "bug" => ("🐞 SnapForge Bug Report", 15548997),             // Red
+        "feature" => ("💡 SnapForge Feature Request", 16753920),    // Amber
+        _ => ("💬 SnapForge User Feedback", 10181046),              // Purple
     };
 
     let mut fields = vec![
@@ -787,13 +787,13 @@ async fn send_discord_feedback(
     }
 
     let payload = serde_json::json!({
-        "username": "ScreenCraft Feedback Mailbox",
+        "username": "SnapForge Feedback Mailbox",
         "embeds": [{
             "title": title,
             "color": color,
             "fields": fields,
             "footer": {
-                "text": "ScreenCraft Community & User Mailbox"
+                "text": "SnapForge Community & User Mailbox"
             }
         }]
     });
@@ -958,7 +958,7 @@ pub fn run() {
                 None::<&str>,
             )?;
             let about_item =
-                MenuItem::with_id(app, "about", "About ScreenCraft", true, None::<&str>)?;
+                MenuItem::with_id(app, "about", "About SnapForge", true, None::<&str>)?;
             let separator2 = PredefinedMenuItem::separator(app)?;
             let exit_item = MenuItem::with_id(app, "exit", "Exit", true, None::<&str>)?;
 
@@ -978,8 +978,8 @@ pub fn run() {
             )?;
 
             let mut tray_builder = TrayIconBuilder::new()
-                .tooltip("ScreenCraft")
-                .title("ScreenCraft")
+                .tooltip("SnapForge")
+                .title("SnapForge")
                 .menu(&tray_menu)
                 .show_menu_on_left_click(true)
                 .on_menu_event(move |app, event| match event.id().as_ref() {

@@ -434,7 +434,7 @@ Function FinishPageShow
     IntOp $5 $7 + 4  ; y position = bottom of control 1202 + 4px
 
     ; WS_CHILD (0x40000000) | WS_VISIBLE (0x10000000) | WS_TABSTOP (0x00010000) | BS_AUTOCHECKBOX (0x00000003) = 0x50010003
-    System::Call 'user32::CreateWindowEx(i 0, w "BUTTON", w "Start ScreenCraft when Windows starts", i 0x50010003, i r4, i r5, i r8, i r9, p r1, i 1203, i 0, i 0) p .s'
+    System::Call 'user32::CreateWindowEx(i 0, w "BUTTON", w "Start SnapForge when Windows starts", i 0x50010003, i r4, i r5, i r8, i r9, p r1, i 1203, i 0, i 0) p .s'
     Pop $StartupCheckbox
 
     SendMessage $HWNDPARENT ${WM_GETFONT} 0 0 $0

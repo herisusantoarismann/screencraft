@@ -121,15 +121,16 @@ mod win_ops {
             let mut path_len = 1024u32;
             let mut exe_name = String::new();
             let mut version_str = String::new();
-            let mut is_screencraft = false;
+            let mut is_app = false;
 
             if QueryFullProcessImageNameW(h_proc, 0, path_buf.as_mut_ptr(), &mut path_len) != 0 {
                 let full_path = OsString::from_wide(&path_buf[..path_len as usize]);
                 let path_str = full_path.to_string_lossy();
                 if let Some(file_name) = std::path::Path::new(&*path_str).file_name() {
                     let name = file_name.to_string_lossy().to_string();
-                    if name.to_lowercase().contains("screencraft") {
-                        is_screencraft = true;
+                    let name_lower = name.to_lowercase();
+                    if name_lower.contains("snapforge") || name_lower.contains("screencraft") {
+                        is_app = true;
                     }
                     exe_name = friendly_app_name(&name);
                 }
@@ -169,7 +170,7 @@ mod win_ops {
                 exe_name = "Application".to_string();
             }
 
-            (exe_name, version_str, is_screencraft)
+            (exe_name, version_str, is_app)
         }
     }
 
@@ -266,15 +267,19 @@ mod win_ops {
                     || t_lower == "program manager"
                     || t_lower == "windows shell experience host"
                     || t_lower == "task switching"
+                    || t_lower.contains("snapforge")
                     || t_lower.contains("screencraft")
                 {
                     curr = GetWindow(curr, GW_HWNDNEXT);
                     continue;
                 }
 
-                // Verify executable is not screencraft
-                let (exe_name, version_str, is_screencraft) = inspect_process(pid);
-                if is_screencraft || exe_name.to_lowercase().contains("screencraft") {
+                // Verify executable is not snapforge or screencraft
+                let (exe_name, version_str, is_app) = inspect_process(pid);
+                if is_app
+                    || exe_name.to_lowercase().contains("snapforge")
+                    || exe_name.to_lowercase().contains("screencraft")
+                {
                     curr = GetWindow(curr, GW_HWNDNEXT);
                     continue;
                 }
@@ -349,7 +354,7 @@ mod win_ops {
             "postman.exe" => "Postman".to_string(),
             "figma.exe" => "Figma".to_string(),
             "notepad.exe" => "Notepad".to_string(),
-            "screencraft.exe" => "ScreenCraft".to_string(),
+            "snapforge.exe" | "screencraft.exe" => "SnapForge".to_string(),
             _ => raw_exe.trim_end_matches(".exe").to_string(),
         }
     }
