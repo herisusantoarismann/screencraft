@@ -59,8 +59,8 @@ jobs:
                   TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
               with:
                   tagName: ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag || 'v1.0.0' }}
-                  releaseName: ScreenCraft ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag || 'v1.0.0' }}
-                  releaseBody: "Release binaries for ScreenCraft."
+                  releaseName: SnapForge ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag || 'v1.0.0' }}
+                  releaseBody: "Release binaries for SnapForge."
                   releaseDraft: false
                   prerelease: false
                   args: ${{ matrix.args }}

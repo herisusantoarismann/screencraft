@@ -1,12 +1,12 @@
 [package]
-name = "screencraft"
+name = "snapforge"
 version = "1.0.0"
 description = "A Tauri App"
 authors = ["heri.s.arisman@gmail.com"]
 edition = "2021"
 
 [lib]
-name = "screencraft_lib"
+name = "snapforge_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

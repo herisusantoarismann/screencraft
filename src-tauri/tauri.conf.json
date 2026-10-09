@@ -1,8 +1,8 @@
 {
     "$schema": "https://schema.tauri.app/config/2",
-    "productName": "ScreenCraft",
+    "productName": "SnapForge",
     "version": "1.0.0",
-    "identifier": "com.screencraft.app",
+    "identifier": "com.snapforge.desktop",
     "build": {
         "beforeDevCommand": "npm run dev",
         "devUrl": "http://localhost:1420",
@@ -13,7 +13,7 @@
         "windows": [
             {
                 "label": "main",
-                "title": "ScreenCraft",
+                "title": "SnapForge",
                 "fullscreen": false,
                 "width": 620,
                 "height": 74,
@@ -35,7 +35,7 @@
         "updater": {
             "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEUxOTA2NERBMTRBNUMyQjMKUldTendxVVUybVNRNFd2RWZ4NmZoVmRrZVJzdDlMWmJxUVJlR2ZzWElxOVdQWHRNVS9VSFM0OHkK",
             "endpoints": [
-                "https://github.com/herisusantoarismann/screencraft/releases/latest/download/latest.json"
+                "https://github.com/herisusantoarismann/snapforge/releases/latest/download/latest.json"
             ]
         }
     },
@@ -43,10 +43,17 @@
         "active": true,
         "createUpdaterArtifacts": true,
         "targets": "all",
+        "category": "Graphics and Design",
+        "shortDescription": "Precision Screen Capture & Workflow Studio",
+        "longDescription": "SnapForge is a high-performance desktop screen capture, annotation, and developer diagnostic utility.",
         "icon": [
             "icons/32x32.png",
+            "icons/64x64.png",
             "icons/128x128.png",
             "icons/128x128@2x.png",
+            "icons/256x256.png",
+            "icons/512x512.png",
+            "icons/icon.png",
             "icons/icon.icns",
             "icons/icon.ico"
         ],
@@ -56,6 +63,34 @@
                 "headerImage": "icons/installer-header.bmp",
                 "sidebarImage": "icons/installer-sidebar.bmp",
                 "template": "nsis/installer.nsi"
+            }
+        },
+        "macOS": {
+            "dmg": {
+                "background": "icons/dmg-background.png",
+                "windowSize": {
+                    "width": 660,
+                    "height": 410
+                },
+                "appPosition": {
+                    "x": 116,
+                    "y": 180
+                },
+                "applicationFolderPosition": {
+                    "x": 544,
+                    "y": 180
+                }
+            }
+        },
+        "linux": {
+            "deb": {
+                "section": "graphics"
+            },
+            "rpm": {
+                "release": "1"
+            },
+            "appimage": {
+                "bundleMediaFramework": false
             }
         }
     }
